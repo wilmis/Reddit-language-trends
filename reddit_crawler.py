@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+import pprint
 import praw
+from praw.models import MoreComments
 
 def make_reddit_instance():
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
     "Create an authorized reddit instance. "
-    reddit = praw.Reddit(client_id=,
+    reddit = praw.Reddit(client_id='Xt0iuspmVUn8GQ',
                          client_secret=,
                          user_agent='languageBot1',
                          username='languageTechbot',
@@ -15,10 +17,10 @@ def make_reddit_instance():
     return reddit
 
 
-def enter_subreddit(reddit):
+def enter_subreddit(reddit, subreddit):
     """Obtain a subreddit instance"""
     # assume you have a Reddit instance bound to variable `reddit`
-    subreddit = reddit.subreddit('sweden')
+    subreddit = reddit.subreddit(subreddit)
 
     print(subreddit.display_name)  # Output: redditdev
     print(subreddit.title)         # Output: reddit Development
@@ -41,7 +43,7 @@ def in_subreddit(subreddit):
     Returns a listgenerator."""
     # assume you have a Subreddit instance bound to variable `subreddit`
     # limit=None ger så många som möjligt
-    for submission in subreddit.hot(limit=3):
+    for submission in subreddit.hot(limit=1):
         print("New post: ")
         print(submission.title)  # Output: the submission's title
         print("1_____")
@@ -55,20 +57,20 @@ def in_subreddit(subreddit):
         #Obtain comment instances.
         top_level_comments = list(submission.comments)
         #print(top_level_comments)
-        print("comments---------------------------")
-        all_comments = submission.comments.list()
-        for comment in all_comments:
-            print(comment.body)
-        #print(all_comments)
-
-
-
-
+        count = 0
+        submission.comments.replace_more(limit=None)
+        #print(len(submission.comments))
+        for comment in submission.comments.list():
+            count +=1
+            #print(count)
+            #print(comment.body)
+        print(submission.created_utc) # tid när subbmission skapades
+        pprint.pprint(vars(submission))
 
 def __main__():
     reddit = make_reddit_instance()
-    subreddit=enter_subreddit(reddit)
-    in_subreddit(subreddit)
+    subreddit=enter_subreddit(reddit,"sweden")
+    return in_subreddit(subreddit)
 
 
 if __name__ == "__main__":
