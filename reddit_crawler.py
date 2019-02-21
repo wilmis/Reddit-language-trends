@@ -3,6 +3,14 @@
 import pprint
 import praw
 from praw.models import MoreComments
+import time
+import re
+
+def tokens(source):
+    regex = r"--|(?:Mr|St|Mrs|Dr)\.|\w+(?:['-]\w+)*|\S"
+    for line in source:
+        for token in re.findall(regex, line):
+            yield token
 
 def make_reddit_instance():
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
@@ -13,7 +21,7 @@ def make_reddit_instance():
                          username='languageTechbot',
                          password=)
 
-    print(reddit.read_only)  # Output: False
+    #print(reddit.read_only)  # Output: False
     return reddit
 
 
@@ -22,8 +30,8 @@ def enter_subreddit(reddit, subreddit):
     # assume you have a Reddit instance bound to variable `reddit`
     subreddit = reddit.subreddit(subreddit)
 
-    print(subreddit.display_name)  # Output: redditdev
-    print(subreddit.title)         # Output: reddit Development
+    #print(subreddit.display_name)  # Output: redditdev
+    #print(subreddit.title)         # Output: reddit Development
     #print(subreddit.description)   # Output: A subreddit for discussion of ...
     return subreddit
 
@@ -43,29 +51,33 @@ def in_subreddit(subreddit):
     Returns a listgenerator."""
     # assume you have a Subreddit instance bound to variable `subreddit`
     # limit=None ger så många som möjligt
-    for submission in subreddit.hot(limit=1):
-        print("New post: ")
-        print(submission.title)  # Output: the submission's title
-        print("1_____")
-        print(submission.score)  # Output: the submission's score
-        print("2____")
-        print(submission.id)     # Output: the submission's ID
-        print("3______")
-        print(submission.url)    # Output: the URL the submission points to
-                                 # or the submission's URL if it's a self post
-        print("4_______")
-        #Obtain comment instances.
-        top_level_comments = list(submission.comments)
-        #print(top_level_comments)
-        count = 0
+    # (tokens, time, user, is_comment, url)
+    for submission in subreddit.hot(limit=None):
+        sub = {"title" :[], "selftext":[], "time":[], "comments":[], "url":[]}
+        temp_list=[]
+        temp_list.append(submission.title)
+        for word in tokens(temp_list):
+            sub["title"].append(word)
+        #print(submission.title)  # Output: the submission's title
+        temp_list.clear()
+        temp_list.append(submission.selftext)
+        for word in tokens(temp_list):
+            sub["selftext"].append(word)
         submission.comments.replace_more(limit=None)
-        #print(len(submission.comments))
+        temp_list.clear()
         for comment in submission.comments.list():
-            count +=1
-            #print(count)
-            #print(comment.body)
-        print(submission.created_utc) # tid när subbmission skapades
-        pprint.pprint(vars(submission))
+            temp_list.append(comment.body)
+        for comment in tokens(temp_list):
+            sub["comments"].append(comment)
+        sub["time"]= submission.created_utc # tid när subbmission skapades
+        sub["url"] = submission.url   # Output: the URL the submission points to
+        #pprint.pprint(vars(submission))
+        print(sub)
+        time.sleep(5)
+
+
+
+
 
 def __main__():
     reddit = make_reddit_instance()
