@@ -6,6 +6,7 @@ from praw.models import MoreComments
 import time
 import re
 
+
 def tokens(source):
     regex = r"--|(?:Mr|St|Mrs|Dr)\.|\w+(?:['-]\w+)*|\S"
     for line in source:
@@ -40,7 +41,7 @@ def enter_subreddit(reddit, subreddit):
 
 def in_subreddit(subreddit):
     """Obtain submission instance form a subreddit.
-    Sorts that can be itteradet through:
+    Sorts that can be iterated through:
     controversial
     gilded
     hot
@@ -72,16 +73,15 @@ def in_subreddit(subreddit):
         sub["time"]= submission.created_utc # tid när subbmission skapades
         sub["url"] = submission.url   # Output: the URL the submission points to
         #pprint.pprint(vars(submission))
-        print(sub)
-        time.sleep(5)
+        title_selftext = Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, url=sub["url"])
+        comments = Post(tokens=sub["comments"], time=sub["time"], user="Unavailible", is_comment=False, url=sub["url"])
+        return (title_selftext, comments)
 
-
-
-
+from language_analyser import Post
 
 def __main__():
     reddit = make_reddit_instance()
-    subreddit=enter_subreddit(reddit,"sweden")
+    subreddit=enter_subreddit(reddit,"news")
     return in_subreddit(subreddit)
 
 
