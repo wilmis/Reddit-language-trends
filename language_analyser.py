@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import reddit_crawler
+#import reddit_crawler
 
 import argparse
 import uuid
