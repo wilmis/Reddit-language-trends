@@ -38,7 +38,7 @@ class Corpus:
         Collects and generates a tokenized corpus for the given subreddit
         using the reddit_crawler
         """
-
+        # pushsift_reddit_crawler.py
         # FIXME: this is just a temporary structure for the corpus.
         post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False,
                       "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/")
