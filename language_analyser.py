@@ -30,7 +30,10 @@ class Corpus:
     def __init__(self, subreddit):
         self.subreddit = 'worldnews'
         self.posts = []  # This is a list so we can sort it later
-
+        self.year = 2017
+        self.month = 1
+        self.day = 1
+        self.subLimit = 10
 
     def build(self):
         """
@@ -38,7 +41,7 @@ class Corpus:
         using the reddit_crawler
         """
         # pushsift_reddit_crawler.py == prc
-        reddit_and_subs = prc.make_reddit_instance( 2017, 1, 1, self.subreddit, 10)
+        reddit_and_subs = prc.make_reddit_instance( self.year, self.month, self.day, self.subreddit, self.subLimit)
         #result = prc.make_pushshiftAPI(reddit, 2017, 1, 1,self.subreddit ,10)
         #subreddit=enter_subreddit(reddit,"news")
         for x in prc.in_subreddit(reddit_and_subs):
