@@ -7,6 +7,7 @@ import time
 import re
 from psaw import PushshiftAPI
 import datetime as dt
+import language_analyser as la
 #from datetime import datetime
 
 # skapa funktion för att bestämma vilket tidsspann som ska sökas över
@@ -23,7 +24,7 @@ def tokens(source):
         for token in re.findall(regex, line):
             yield token
 
-def make_reddit_instance():
+def make_reddit_instance( year, month, day, subred, limit_sub):
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
     "Create an authorized reddit instance. "
     reddit = praw.Reddit(client_id='Xt0iuspmVUn8GQ',
@@ -32,16 +33,17 @@ def make_reddit_instance():
                          username='languageTechbot',
                          password=)
 
+    list_of_submissions = make_pushshiftAPI(reddit, year, month, day, subred, limit_sub)
     #print(reddit.read_only)  # Output: False
-    return reddit
+    return (reddit, list_of_submissions)
 
-def make_pushshiftAPI(reddit):
+def make_pushshiftAPI(reddit, year, month, day, subred, limit_sub):
     api = PushshiftAPI(reddit)
     # Skriv det datum du vill plocka submissions fram till
-    start_epoch=int(dt.datetime(2017, 1, 1).timestamp())
+    start_epoch=int(dt.datetime(year, month, day).timestamp())
     # subreddit är där vi plockar submissions ifrån
     # limit är antal
-    gen =list(api.search_submissions(before=start_epoch,subreddit='news',limit=10))
+    gen =list(api.search_submissions(before=start_epoch,subreddit=subred,limit=limit_sub))
     list_of_submissions = list(gen)
     return list_of_submissions
 
@@ -56,9 +58,7 @@ def enter_subreddit(reddit, subreddit):
     return subreddit
 
 
-
-
-def in_subreddit(list_of_submissions,reddit):
+def in_subreddit(reddit_and_subs):
     """Obtain submission instance form a subreddit.
     Sorts that can be iterated through:
     controversial
@@ -73,8 +73,8 @@ def in_subreddit(list_of_submissions,reddit):
     # limit=None ger så många som möjligt
     # (tokens, time, user, is_comment, url)
     list_to_return =[]
-    for submission_id in list_of_submissions:
-        submission = reddit.submission(id=submission_id)
+    for submission_id in reddit_and_subs[1]:
+        submission = reddit_and_subs[0].submission(id=submission_id)
         sub = {"title" :[], "selftext":[], "time":[], "comments":[], "url":[]}
         temp_list=[]
         temp_list.append(submission.title)
@@ -94,21 +94,27 @@ def in_subreddit(list_of_submissions,reddit):
         sub["time"]= submission.created_utc # tid när subbmission skapades
         sub["url"] = submission.url   # Output: the URL the submission points to
         #pprint.pprint(vars(submission))
-        title_selftext = Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, url=sub["url"])
-        comments = Post(tokens=sub["comments"], time=sub["time"], user="Unavailible", is_comment=False, url=sub["url"])
-        #print(title_selftext.url)
+        title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
+        comments = la.Post(tokens=sub["comments"], time=sub["time"],
+                           user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"])
+        print(comments.url)
+        print(title_selftext.url)
         #print(datetime.fromtimestamp(title_selftext.time))
-        list_to_return.append(title_selftext)
-        list_to_return.append(comments)
-    return list_to_return
+        #list_to_return.append((title_selftext, comments))
+    #return list_to_return
+        yield (title_selftext, comments)
 
-from language_analyser import Post
 
 def __main__():
-    reddit = make_reddit_instance()
-    result = make_pushshiftAPI(reddit)
+    reddit_and_subs = make_reddit_instance(2017, 1, 1, 'worldnews',10)
+    #return in_subreddit(reddit_and_subs)
+    for x in in_subreddit(reddit_and_subs):
+        print(x[0].tokens)
+
+    """reddit = make_reddit_instance()
+    result = make_pushshiftAPI(reddit, 2017, 1, 1,'worldnews',10)
     #subreddit=enter_subreddit(reddit,"news")
-    return in_subreddit(result,reddit)
+    return in_subreddit(result,reddit)"""
 
 
 if __name__ == "__main__":
