@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-#import reddit_crawler
+import pushsift_reddit_crawler as prc
 
 import argparse
 import uuid
@@ -9,13 +9,14 @@ import uuid
 class Post:
     """ Representing data held in posts"""
 
-    def __init__(self, tokens, time, user, is_comment, url):
+    def __init__(self, tokens, time, user, is_comment, parentPost, url):
         """Initiate with data about the post obtained from crawler"""
         self.id = uuid.uuid4().hex
         self.tokens = tokens
         self.time = time
         self.user = user
         self.is_comment = is_comment
+        self.parentPost = parentPost
         self.url = url
         # TODO: add language?
 
@@ -27,18 +28,22 @@ class Post:
 
 class Corpus:
     def __init__(self, subreddit):
-        self.subreddit = subreddit
+        self.subreddit = 'worldnews'
         self.posts = []  # This is a list so we can sort it later
 
-    def add_post(self, post):
-        self.posts.append(post)
 
     def build(self):
         """
         Collects and generates a tokenized corpus for the given subreddit
         using the reddit_crawler
         """
-        # pushsift_reddit_crawler.py
+        # pushsift_reddit_crawler.py == prc
+        reddit_and_subs = prc.make_reddit_instance( 2017, 1, 1, self.subreddit, 10)
+        #result = prc.make_pushshiftAPI(reddit, 2017, 1, 1,self.subreddit ,10)
+        #subreddit=enter_subreddit(reddit,"news")
+        for x in prc.in_subreddit(reddit_and_subs):
+            print(x[0].tokens)
+
         # FIXME: this is just a temporary structure for the corpus.
         post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False,
                       "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/")
