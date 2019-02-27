@@ -28,9 +28,9 @@ class Post:
 
 class Corpus:
     def __init__(self, subreddit):
-        self.subreddit = 'drugs'
+        self.subreddit = subreddit
         self.posts = []  # This is a list so we can sort it later
-        self.year = 2017
+        self.year = 2014
         self.month = 1
         self.day = 1
         self.subLimit = 10
@@ -44,9 +44,9 @@ class Corpus:
         reddit_and_subs = prc.make_reddit_instance( self.year, self.month, self.day, self.subreddit, self.subLimit)
         #result = prc.make_pushshiftAPI(reddit, 2017, 1, 1,self.subreddit ,10)
         #subreddit=enter_subreddit(reddit,"news")
-        for x in prc.in_subreddit(reddit_and_subs):
-            print(x[0].tokens)
-            self.posts.append(x)
+        for postTuple in prc.in_subreddit(reddit_and_subs):
+            print(postTuple[0].tokens)
+            self.posts.append(postTuple)
 
         # FIXME: this is just a temporary structure for the corpus.
         #post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False,
@@ -122,6 +122,6 @@ if __name__ == "__main__":
     subreddits = args.subreddit
     # If no subreddits, use /r/sweden as default
     if len(subreddits) == 0:
-        subreddits.append("sweden")
+        subreddits.append('worldnews')
 
     main(subreddits)
