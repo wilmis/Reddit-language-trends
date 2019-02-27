@@ -28,7 +28,7 @@ class Post:
 
 class Corpus:
     def __init__(self, subreddit):
-        self.subreddit = 'worldnews'
+        self.subreddit = 'drugs'
         self.posts = []  # This is a list so we can sort it later
         self.year = 2017
         self.month = 1
@@ -46,16 +46,17 @@ class Corpus:
         #subreddit=enter_subreddit(reddit,"news")
         for x in prc.in_subreddit(reddit_and_subs):
             print(x[0].tokens)
+            self.posts.append(x)
 
         # FIXME: this is just a temporary structure for the corpus.
-        post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False,
-                      "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/")
-        self.add_post(post_a)
+        #post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False,
+                     # "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/")
+        #self.add_post(post_a)
 
-        post_b = Post(["popcorn", "is", "the", "best", "thing", "since", "sliced", "bread"], 135721842345,
-                      "thisisbillgates", True,
-                      "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/comments=53774")
-        self.add_post(post_b)
+        #post_b = Post(["popcorn", "is", "the", "best", "thing", "since", "sliced", "bread"], 135721842345,
+                     # "thisisbillgates", True,
+                     # "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/comments=53774")
+        #self.add_post(post_b)
 
     def sort_posts(self):
         """ TODO:sort posts with oldest first """
