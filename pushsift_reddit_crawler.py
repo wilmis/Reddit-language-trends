@@ -6,8 +6,11 @@ from praw.models import MoreComments
 import time
 import re
 from psaw import PushshiftAPI
+import json
 import datetime as dt
 import language_analyser as la
+import os
+
 #from datetime import datetime
 
 # skapa funktion för att bestämma vilket tidsspann som ska sökas över
@@ -27,11 +30,14 @@ def tokens(source):
 def make_reddit_instance( year, month, day, subred, limit_sub):
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
     "Create an authorized reddit instance. "
-    reddit = praw.Reddit(client_id='Xt0iuspmVUn8GQ',
-                         client_secret=,
-                         user_agent='languageBot1',
-                         username='languageTechbot',
-                         password=)
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "LOGIN.json")) as f:
+        data = json.load(f)
+    
+    reddit = praw.Reddit(client_id=data["client_id"],
+                         client_secret=data["client_secret"],
+                         user_agent=data["user_agent"],
+                         username=data["username"],
+                         password=data["password"])
 
     list_of_submissions = make_pushshiftAPI(reddit, year, month, day, subred, limit_sub)
     #print(reddit.read_only)  # Output: False
