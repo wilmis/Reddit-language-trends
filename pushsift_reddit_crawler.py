@@ -32,7 +32,7 @@ def make_reddit_instance( year, month, day, subred, limit_sub):
     "Create an authorized reddit instance. "
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "LOGIN.json")) as f:
         data = json.load(f)
-    
+
     reddit = praw.Reddit(client_id=data["client_id"],
                          client_secret=data["client_secret"],
                          user_agent=data["user_agent"],
@@ -117,10 +117,6 @@ def __main__():
     for x in in_subreddit(reddit_and_subs):
         print(x[0].tokens)
 
-    """reddit = make_reddit_instance()
-    result = make_pushshiftAPI(reddit, 2017, 1, 1,'worldnews',10)
-    #subreddit=enter_subreddit(reddit,"news")
-    return in_subreddit(result,reddit)"""
 
 
 if __name__ == "__main__":
