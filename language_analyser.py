@@ -30,9 +30,9 @@ class Post:
 
 class Corpus:
     def __init__(self, subreddit):
-        self.subreddit = 'worldnews'
+        self.subreddit = subreddit
         self.posts = []  # This is a list so we can sort it later
-        self.year = 2017
+        self.year = 2014
         self.month = 1
         self.day = 1
         self.subLimit = 10
@@ -46,8 +46,10 @@ class Corpus:
         reddit_and_subs = prc.make_reddit_instance( self.year, self.month, self.day, self.subreddit, self.subLimit)
         #result = prc.make_pushshiftAPI(reddit, 2017, 1, 1,self.subreddit ,10)
         #subreddit=enter_subreddit(reddit,"news")
-        for x in prc.in_subreddit(reddit_and_subs):
-            print(x[0].tokens)
+        for postTuple in prc.in_subreddit(reddit_and_subs):
+            print(postTuple[1].tokens)
+            # FIXME: only Post objects work in the self.posts list. Problems in perform analysis later
+            # self.posts.append(postTuple)
 
         # FIXME: this is just a temporary structure for the corpus.
         post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False, None,
@@ -111,9 +113,9 @@ def main():
                         help='What subreddits to analyze')
     args = parser.parse_args()
     subreddits = args.subreddit
-    # If no subreddits, use /r/sweden as default
+    # If no subreddits, use /r/worldnews as default
     if len(subreddits) == 0:
-        subreddits.append("sweden")
+        subreddits.append("worldnews")
     
     # TODO: add to argument parser
     posts = 500

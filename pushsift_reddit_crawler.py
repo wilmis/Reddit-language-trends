@@ -20,7 +20,7 @@ import os
 # skicka de till reddit_crawler för att plockain data.
 
 
-
+#TODO yield list with tokenised sentences. Checking stop tokens.
 def tokens(source):
     regex = r"--|(?:Mr|St|Mrs|Dr)\.|\w+(?:['-]\w+)*|\S"
     for line in source:
@@ -32,7 +32,7 @@ def make_reddit_instance( year, month, day, subred, limit_sub):
     "Create an authorized reddit instance. "
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "LOGIN.json")) as f:
         data = json.load(f)
-    
+
     reddit = praw.Reddit(client_id=data["client_id"],
                          client_secret=data["client_secret"],
                          user_agent=data["user_agent"],
@@ -103,8 +103,6 @@ def in_subreddit(reddit_and_subs):
         title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
         comments = la.Post(tokens=sub["comments"], time=sub["time"],
                            user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"])
-        print(comments.url)
-        print(title_selftext.url)
         #print(datetime.fromtimestamp(title_selftext.time))
         #list_to_return.append((title_selftext, comments))
     #return list_to_return
@@ -114,13 +112,9 @@ def in_subreddit(reddit_and_subs):
 def __main__():
     reddit_and_subs = make_reddit_instance(2017, 1, 1, 'worldnews',10)
     #return in_subreddit(reddit_and_subs)
-    for x in in_subreddit(reddit_and_subs):
-        print(x[0].tokens)
+    #for x in in_subreddit(reddit_and_subs):
+        #print(x[0].tokens)
 
-    """reddit = make_reddit_instance()
-    result = make_pushshiftAPI(reddit, 2017, 1, 1,'worldnews',10)
-    #subreddit=enter_subreddit(reddit,"news")
-    return in_subreddit(result,reddit)"""
 
 
 if __name__ == "__main__":
