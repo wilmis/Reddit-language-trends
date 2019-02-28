@@ -4,6 +4,8 @@ import pushsift_reddit_crawler as prc
 
 import argparse
 import uuid
+import pickle
+import os
 
 
 class Post:
@@ -48,14 +50,14 @@ class Corpus:
             print(x[0].tokens)
 
         # FIXME: this is just a temporary structure for the corpus.
-        post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False,
+        post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False, None,
                       "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/")
-        self.add_post(post_a)
+        self.posts.append(post_a)
 
         post_b = Post(["popcorn", "is", "the", "best", "thing", "since", "sliced", "bread"], 135721842345,
-                      "thisisbillgates", True,
+                      "thisisbillgates", True, None,
                       "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/comments=53774")
-        self.add_post(post_b)
+        self.posts.append(post_b)
 
     def sort_posts(self):
         """ TODO:sort posts with oldest first """
@@ -80,37 +82,27 @@ class Corpus:
         self.posts[0].reduced_data = (0.3, 0.7)
         self.posts[1].reduced_data = (0.8, 0.5)
 
+def corpus_from_file(path):
+    print("Using existsing corpus file: "+path)
+    corpus_file = open(path, mode='rb')
+    corpus = pickle.load(corpus_file)
+    corpus_file.close()
+    return corpus
 
-def main(subreddits):
+def corpus_to_file(corpus, path):
+    print("Saving built corpus to: "+path)
+    corpus_file = open(path, mode='wb')
+    pickle.dump(corpus, corpus_file)
+    corpus_file.close()
+
+def remove_corpus_file(path):
+    if os.path.exists(path):
+        print("Removing corpus "+path)
+        os.remove(path)
+
+def main():
     """ Generate, analyze, cluster and visualize data from given subreddits """
 
-    corpuses = {}
-    for subreddit in subreddits:
-        # The data is collected from reddit and corpuses are stored in a dictionary
-        print("Creating corpus: /r/"+subreddit)
-        corpus = Corpus(subreddit)
-        corpus.build()
-
-        # Features are extracted from the corpuses and stored in as high
-        # dimensional representations
-        print("Analyzing corpus: /r/" + subreddit)
-        corpus.perform_analysis()
-
-        # This data is then converted into 2D points
-        print("Reducing corpus representation: /r/" + subreddit)
-        corpus.reduce_data_dimensions()
-
-        # Save to dictionary and to file in /data/ directory
-        corpuses[subreddit] = corpus
-        print("Saving clustered corpus: /r/" + subreddit + "\n\n")
-        # TODO: save to file
-
-    # TODO: open HTTP server
-
-    # TODO: tell default browser to open web server address and visualize data
-
-
-if __name__ == "__main__":
     # Figure out what algoritms the user wants to analyze.
     # This is fed into the program by typing for example:
     # python language_analyzer.py aww me_irl
@@ -122,5 +114,71 @@ if __name__ == "__main__":
     # If no subreddits, use /r/sweden as default
     if len(subreddits) == 0:
         subreddits.append("sweden")
+    
+    # TODO: add to argument parser
+    posts = 500
+    read_from_cache = True
+    save_to_cache = True
+    remove_previous_stage_caches = True
+    
+    save_cache_to_server = False # TODO
+    get_cache_from_server = False # TODO
 
-    main(subreddits)
+    corpuses = {}
+    for subreddit in subreddits:
+        cache_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "caches")
+        built_path = os.path.join(cache_path, subreddit+"_1built_"+str(posts)+".pickle")
+        analyzed_path = os.path.join(cache_path, subreddit+"_2analyzed_"+str(posts)+".pickle")
+        reduced_path = os.path.join(cache_path, subreddit+"_3reduced_"+str(posts)+".pickle")
+
+        if os.path.isfile(reduced_path) and read_from_cache:
+            corpus = corpus_from_file(reduced_path)
+        else:
+            if os.path.isfile(analyzed_path) and read_from_cache:
+                corpus = corpus_from_file(analyzed_path)
+            else:
+                if os.path.isfile(built_path) and read_from_cache:
+                    corpus = corpus_from_file(built_path)
+                else:
+                    # The data is collected from reddit and corpuses are stored in a dictionary
+                    print("\nCreating corpus: /r/"+subreddit)
+                    corpus = Corpus(subreddit)
+                    corpus.build()
+                    
+                    if save_to_cache:
+                        corpus_to_file(corpus, built_path)
+                        
+                # Features are extracted from the corpuses and stored in as high
+                # dimensional representations
+                print("\nAnalyzing corpus: /r/" + subreddit)
+                corpus.perform_analysis()
+
+                if save_to_cache:
+                        corpus_to_file(corpus, analyzed_path)
+
+                if remove_previous_stage_caches:
+                    remove_corpus_file(built_path)
+
+            # This data is then converted into 2D points
+            print("\nReducing corpus representation: /r/" + subreddit)
+            corpus.reduce_data_dimensions()
+
+            if save_to_cache:
+                corpus_to_file(corpus, reduced_path)
+            
+            if remove_previous_stage_caches:
+                remove_corpus_file(built_path)
+                remove_corpus_file(analyzed_path)
+                
+
+
+        corpuses[subreddit] = corpus
+
+
+    # TODO: open HTTP server
+
+    # TODO: tell default browser to open web server address and visualize data
+
+
+if __name__ == "__main__":
+    main()
