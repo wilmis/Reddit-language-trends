@@ -45,7 +45,7 @@ class Corpus:
         #result = prc.make_pushshiftAPI(reddit, 2017, 1, 1,self.subreddit ,10)
         #subreddit=enter_subreddit(reddit,"news")
         for postTuple in prc.in_subreddit(reddit_and_subs):
-            #print(postTuple[0].tokens)
+            print(postTuple[1].tokens)
             self.posts.append(postTuple)
 
         # FIXME: this is just a temporary structure for the corpus.
