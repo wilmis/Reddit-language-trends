@@ -20,7 +20,7 @@ import os
 # skicka de till reddit_crawler för att plockain data.
 
 
-
+#TODO yield list with tokenised sentences. Checking stop tokens.
 def tokens(source):
     regex = r"--|(?:Mr|St|Mrs|Dr)\.|\w+(?:['-]\w+)*|\S"
     for line in source:
