@@ -47,7 +47,7 @@ def make_reddit_instance():
                          username=data["username"],
                          password=data["password"])
 
-   
+
     list_of_submissions = make_pushshiftAPI(reddit)
     #print(reddit.read_only)  # Output: False
     return (reddit, make_pushshiftAPI(reddit))
@@ -103,15 +103,15 @@ def in_subreddit(reddit, submissions):
         temp_list.append(submission.selftext)
         for word in tokens(temp_list):
             sub["selftext"].append(word)
-        # FIXME: replace_more slows down the script ALOT
-        """
-        submission.comments.replace_more(limit=None)
+        # FIXME: replace_more slows down the script ALOT, top comments instead
+
+        submission.comments.replace_more(limit=0)
         temp_list.clear()
         for comment in submission.comments.list():
             temp_list.append(comment.body)
         for comment in tokens(temp_list):
             sub["comments"].append(comment)
-        """
+
 
         sub["time"]= submission.created_utc # tid när subbmission skapades
         sub["url"] = submission.url   # Output: the URL the submission points to
