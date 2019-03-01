@@ -7,6 +7,9 @@ import uuid
 import pickle
 import os
 import datetime as dt
+import http.server
+import webbrowser
+
 
 class Post:
     """ Representing data held in posts"""
@@ -112,6 +115,7 @@ def main():
         subreddits.append("worldnews")
 
     # TODO: add to argument parser
+    server_port = 8000
     posts = 500
     read_from_cache = False
     save_to_cache = True
@@ -175,10 +179,17 @@ def main():
 
         corpuses[subreddit] = corpus
 
+    # Open website in default browser
+    print("Hosting in default webbrowser on: "+"http://localhost:"+str(server_port))
+    webbrowser.open("http://localhost:"+str(server_port))
 
-    # TODO: open HTTP server
-
-    # TODO: tell default browser to open web server address and visualize data
+    # Open HTTP-server
+    server_address = ('', server_port)
+    httpd = http.server.HTTPServer(server_address, http.server.SimpleHTTPRequestHandler)
+    print("Starting http server")
+    httpd.serve_forever()
+    
+    
 
 
 if __name__ == "__main__":
