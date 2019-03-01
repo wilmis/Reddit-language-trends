@@ -47,11 +47,13 @@ class Corpus:
         #result = prc.make_pushshiftAPI(reddit, 2017, 1, 1,self.subreddit ,10)
         #subreddit=enter_subreddit(reddit,"news")
         for postTuple in prc.in_subreddit(reddit_and_subs):
-            print(postTuple[1].tokens)
-            # FIXME: only Post objects work in the self.posts list. Problems in perform analysis later
-            # self.posts.append(postTuple)
+            print(postTuple[0].tokens)
+            print(len(postTuple[1]))
 
-        # FIXME: this is just a temporary structure for the corpus.
+            # FIXME: only Post objects work in the self.posts list. Problems in perform analysis later
+            self.posts.append(postTuple)
+
+        """# FIXME: this is just a temporary structure for the corpus.
         post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False, None,
                       "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/")
         self.posts.append(post_a)
@@ -59,7 +61,7 @@ class Corpus:
         post_b = Post(["popcorn", "is", "the", "best", "thing", "since", "sliced", "bread"], 135721842345,
                       "thisisbillgates", True, None,
                       "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/comments=53774")
-        self.posts.append(post_b)
+        self.posts.append(post_b)"""
 
     def sort_posts(self):
         """ TODO:sort posts with oldest first """
@@ -71,8 +73,8 @@ class Corpus:
         Save a high dimensional representation each post
         """
 
-        self.posts[0].analyzed_data = {"sentiment": [0.5, 0.1, 0.3], "length": 30, "complexity": 0.92}
-        self.posts[1].analyzed_data = {"sentiment": [0.8, 0.2, 0.8], "length": 10, "complexity": 0.12}
+        """self.posts[0].analyzed_data = {"sentiment": [0.5, 0.1, 0.3], "length": 30, "complexity": 0.92}
+        self.posts[1].analyzed_data = {"sentiment": [0.8, 0.2, 0.8], "length": 10, "complexity": 0.12}"""
 
     def reduce_data_dimensions(self):
         """
@@ -116,13 +118,13 @@ def main():
     # If no subreddits, use /r/worldnews as default
     if len(subreddits) == 0:
         subreddits.append("worldnews")
-    
+
     # TODO: add to argument parser
     posts = 500
     read_from_cache = True
     save_to_cache = True
     remove_previous_stage_caches = True
-    
+
     save_cache_to_server = False # TODO
     get_cache_from_server = False # TODO
 
@@ -146,10 +148,10 @@ def main():
                     print("\nCreating corpus: /r/"+subreddit)
                     corpus = Corpus(subreddit)
                     corpus.build()
-                    
+
                     if save_to_cache:
                         corpus_to_file(corpus, built_path)
-                        
+
                 # Features are extracted from the corpuses and stored in as high
                 # dimensional representations
                 print("\nAnalyzing corpus: /r/" + subreddit)
@@ -167,11 +169,11 @@ def main():
 
             if save_to_cache:
                 corpus_to_file(corpus, reduced_path)
-            
+
             if remove_previous_stage_caches:
                 remove_corpus_file(built_path)
                 remove_corpus_file(analyzed_path)
-                
+
 
 
         corpuses[subreddit] = corpus
