@@ -6,6 +6,7 @@ from praw.models import MoreComments
 import time
 import re
 from psaw import PushshiftAPI
+
 import json
 import datetime as dt
 import language_analyser as la
@@ -27,7 +28,7 @@ def tokens(source):
         for token in re.findall(regex, line):
             yield token
 
-def make_reddit_instance( year, month, day, subred, limit_sub):
+def make_reddit_instance():
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
     "Create an authorized reddit instance. "
     with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "LOGIN.json")) as f:
@@ -39,19 +40,22 @@ def make_reddit_instance( year, month, day, subred, limit_sub):
                          username=data["username"],
                          password=data["password"])
 
-    list_of_submissions = make_pushshiftAPI(reddit, year, month, day, subred, limit_sub)
+   
+    list_of_submissions = make_pushshiftAPI(reddit)
     #print(reddit.read_only)  # Output: False
-    return (reddit, list_of_submissions)
+    return (reddit, make_pushshiftAPI(reddit))
 
-def make_pushshiftAPI(reddit, year, month, day, subred, limit_sub):
+def make_pushshiftAPI(reddit):
     api = PushshiftAPI(reddit)
-    # Skriv det datum du vill plocka submissions fram till
-    start_epoch=int(dt.datetime(year, month, day).timestamp())
+    return api
+
+def query(reddit, api, start_epoch, subreddit, limit_sub):
     # subreddit är där vi plockar submissions ifrån
     # limit är antal
-    gen =list(api.search_submissions(before=start_epoch,subreddit=subred,limit=limit_sub))
+    gen = list(api.search_submissions(before=start_epoch, subreddit=subreddit, limit=limit_sub))
     list_of_submissions = list(gen)
-    return list_of_submissions
+    posts = in_subreddit(reddit, list_of_submissions)
+    return posts
 
 def enter_subreddit(reddit, subreddit):
     """Obtain a subreddit instance"""
@@ -64,7 +68,7 @@ def enter_subreddit(reddit, subreddit):
     return subreddit
 
 
-def in_subreddit(reddit_and_subs):
+def in_subreddit(reddit, submissions):
     """Obtain submission instance form a subreddit.
     Sorts that can be iterated through:
     controversial
@@ -79,8 +83,8 @@ def in_subreddit(reddit_and_subs):
     # limit=None ger så många som möjligt
     # (tokens, time, user, is_comment, url)
     list_to_return =[]
-    for submission_id in reddit_and_subs[1]:
-        submission = reddit_and_subs[0].submission(id=submission_id)
+    for submission_id in submissions:
+        submission = reddit.submission(id=submission_id)
         sub = {"title" :[], "selftext":[], "time":[], "comments":[], "url":[]}
         temp_list=[]
         temp_list.append(submission.title)
@@ -91,18 +95,24 @@ def in_subreddit(reddit_and_subs):
         temp_list.append(submission.selftext)
         for word in tokens(temp_list):
             sub["selftext"].append(word)
+        # FIXME: replace_more slows down the script ALOT
+        """
         submission.comments.replace_more(limit=None)
         temp_list.clear()
         for comment in submission.comments.list():
             temp_list.append(comment.body)
         for comment in tokens(temp_list):
             sub["comments"].append(comment)
+        """
         sub["time"]= submission.created_utc # tid när subbmission skapades
         sub["url"] = submission.url   # Output: the URL the submission points to
         #pprint.pprint(vars(submission))
         title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
+        # FIXME: same bug as above
+        
         comments = la.Post(tokens=sub["comments"], time=sub["time"],
                            user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"])
+       
         #print(datetime.fromtimestamp(title_selftext.time))
         #list_to_return.append((title_selftext, comments))
     #return list_to_return

@@ -6,7 +6,7 @@ import argparse
 import uuid
 import pickle
 import os
-
+import datetime as dt
 
 class Post:
     """ Representing data held in posts"""
@@ -37,33 +37,34 @@ class Corpus:
         self.day = 1
         self.subLimit = 10
 
-    def build(self):
+    def build(self, reddit, pushshift_api, time_start, time_stop, submissions):
         """
         Collects and generates a tokenized corpus for the given subreddit
         using the reddit_crawler
         """
+
         # pushsift_reddit_crawler.py == prc
-        reddit_and_subs = prc.make_reddit_instance( self.year, self.month, self.day, self.subreddit, self.subLimit)
+        for t in range(time_start, time_stop, int((time_stop-time_start)/submissions)):
+            print("\r{0} %".format(int((t-time_start)/(time_stop-time_start)*100)), end="\r")
+            q = prc.query(reddit, pushshift_api, t, self.subreddit, 1)
+            for p in q:
+                if len([c for x in self.posts if x.id == p[0].id]) == 0: # FIXME: this is slow and ugly
+                    self.posts.append(p[0])
+                else:
+                    print("Got the same post twice")
+        print("done")
+
+        print(self.posts) 
+     
         #result = prc.make_pushshiftAPI(reddit, 2017, 1, 1,self.subreddit ,10)
         #subreddit=enter_subreddit(reddit,"news")
-        for postTuple in prc.in_subreddit(reddit_and_subs):
-            print(postTuple[1].tokens)
+        #for postTuple in prc.in_subreddit(reddit_and_subs):
+            # print(postTuple[1].tokens)
             # FIXME: only Post objects work in the self.posts list. Problems in perform analysis later
             # self.posts.append(postTuple)
 
-        # FIXME: this is just a temporary structure for the corpus.
-        post_a = Post(["today", "i", "learned", "you", "eat", "popcorn", "microwaved"], 13572134687, "axelwickm", False, None,
-                      "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/")
-        self.posts.append(post_a)
-
-        post_b = Post(["popcorn", "is", "the", "best", "thing", "since", "sliced", "bread"], 135721842345,
-                      "thisisbillgates", True, None,
-                      "https://www.reddit.com/r/CasualConversation/comments/95hpj2/today_i_learned_that_you_eat_popcorn_microwaved/comments=53774")
-        self.posts.append(post_b)
-
     def sort_posts(self):
-        """ TODO:sort posts with oldest first """
-        pass
+        self.posts.sort(key=lambda x:x.time)
 
     def perform_analysis(self):
         """
@@ -119,12 +120,14 @@ def main():
     
     # TODO: add to argument parser
     posts = 500
-    read_from_cache = True
+    read_from_cache = False
     save_to_cache = True
     remove_previous_stage_caches = True
     
     save_cache_to_server = False # TODO
     get_cache_from_server = False # TODO
+
+    reddit, pushshift_api = prc.make_reddit_instance()
 
     corpuses = {}
     for subreddit in subreddits:
@@ -145,7 +148,10 @@ def main():
                     # The data is collected from reddit and corpuses are stored in a dictionary
                     print("\nCreating corpus: /r/"+subreddit)
                     corpus = Corpus(subreddit)
-                    corpus.build()
+                    
+                    time_start = int(dt.datetime(2012, 2, 4).timestamp())
+                    time_stop = int(dt.datetime(2019, 2, 4).timestamp())
+                    corpus.build(reddit, pushshift_api, time_start, time_stop, 50)
                     
                     if save_to_cache:
                         corpus_to_file(corpus, built_path)
