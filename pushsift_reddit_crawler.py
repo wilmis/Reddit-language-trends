@@ -23,10 +23,17 @@ import os
 
 #TODO yield list with tokenised sentences. Checking stop tokens.
 def tokens(source):
+    temp_list=[[]]
+    stopWords=['.','?','!']
     regex = r"--|(?:Mr|St|Mrs|Dr)\.|\w+(?:['-]\w+)*|\S"
     for line in source:
         for token in re.findall(regex, line):
-            yield token
+            if token in stopWords:
+                temp_list[0].append(token)
+                yield temp_list.pop()
+                temp_list.append([])
+            else:
+                temp_list[0].append(token)
 
 def make_reddit_instance():
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
@@ -82,9 +89,10 @@ def in_subreddit(reddit, submissions):
     # assume you have a Subreddit instance bound to variable `subreddit`
     # limit=None ger så många som möjligt
     # (tokens, time, user, is_comment, url)
-    list_to_return =[]
+    list_to_return = []
     for submission_id in submissions:
         submission = reddit.submission(id=submission_id)
+
         sub = {"title" :[], "selftext":[], "time":[], "comments":[], "url":[]}
         temp_list=[]
         temp_list.append(submission.title)
@@ -104,19 +112,25 @@ def in_subreddit(reddit, submissions):
         for comment in tokens(temp_list):
             sub["comments"].append(comment)
         """
+
         sub["time"]= submission.created_utc # tid när subbmission skapades
         sub["url"] = submission.url   # Output: the URL the submission points to
         #pprint.pprint(vars(submission))
         title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
-        # FIXME: same bug as above
-        
-        comments = la.Post(tokens=sub["comments"], time=sub["time"],
-                           user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"])
-       
+
+        postList = []
+        for comment in submission.comments.list():
+            temp_list.append(comment.body)
+        for comment in tokens(temp_list):
+            postList.append(la.Post(tokens=comment, time=sub["time"],
+                               user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"]))
+        temp_list.clear()
+        yield (title_selftext, postList)
+
         #print(datetime.fromtimestamp(title_selftext.time))
         #list_to_return.append((title_selftext, comments))
     #return list_to_return
-        yield (title_selftext, comments)
+
 
 
 def __main__():
