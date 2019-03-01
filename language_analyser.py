@@ -147,7 +147,7 @@ def main():
     server_port = 8000
     posts = 50000
 
-    read_from_cache = False
+    read_from_cache = True
     save_to_cache = True
     remove_previous_stage_caches = False
 
@@ -176,8 +176,8 @@ def main():
                     print("\nCreating corpus: /r/"+subreddit)
                     corpus = Corpus(subreddit)
 
-                    time_start = int(dt.datetime(2012, 2, 4).timestamp())
-                    time_stop = int(dt.datetime(2019, 2, 4).timestamp())
+                    time_start = int(dt.datetime(2013, 1, 1).timestamp())
+                    time_stop = int(dt.datetime(2019, 1, 1).timestamp())
                     corpus.build(reddit, pushshift_api, time_start, time_stop, posts)
 
                     if save_to_cache:
@@ -218,8 +218,8 @@ def main():
     httpd = http.server.HTTPServer(server_address, http.server.SimpleHTTPRequestHandler)
     print("Starting http server")
     httpd.serve_forever()
-    
-    
+
+
 
 
 if __name__ == "__main__":

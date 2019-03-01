@@ -23,17 +23,23 @@ import os
 
 #TODO yield list with tokenised sentences. Checking stop tokens.
 def tokens(source):
-    temp_list=[[]]
+    return_list=[[]]
     stopWords=['.','?','!']
     regex = r"--|(?:Mr|St|Mrs|Dr)\.|\w+(?:['-]\w+)*|\S"
-    for line in source:
-        for token in re.findall(regex, line):
-            if token in stopWords:
-                temp_list[0].append(token)
-                yield temp_list.pop()
-                temp_list.append([])
-            else:
-                temp_list[0].append(token)
+    for token in re.findall(regex, source):
+        return_list[-1].append(token)
+        if token in stopWords:
+            return_list.append([])
+
+    if return_list[-1] == []:
+        del return_list[-1]
+    print(return_list)
+    if return_list == []:
+        print("WRONG:")
+        print(repr(source))
+    yield return_list
+    return_list.clear()
+
 
 def make_reddit_instance():
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
@@ -96,36 +102,32 @@ def in_subreddit(reddit, submissions):
         sub = {"title" :[], "selftext":[], "time":[], "comments":[], "url":[]}
         temp_list=[]
         temp_list.append(submission.title)
-        for word in tokens(temp_list):
+        for word in tokens(submission.title):
             sub["title"].append(word)
         #print(submission.title)  # Output: the submission's title
         temp_list.clear()
         temp_list.append(submission.selftext)
-        for word in tokens(temp_list):
+        for word in tokens(submission.selftext):
             sub["selftext"].append(word)
         # FIXME: replace_more slows down the script ALOT, top comments instead
 
         submission.comments.replace_more(limit=0)
         temp_list.clear()
         for comment in submission.comments.list():
-            temp_list.append(comment.body)
-        for comment in tokens(temp_list):
-            sub["comments"].append(comment)
-
+            print(repr(comment.body))
+            sub["comments"].append(tokens(str(comment.body)))
 
         sub["time"]= submission.created_utc # tid när subbmission skapades
         sub["url"] = submission.url   # Output: the URL the submission points to
         #pprint.pprint(vars(submission))
         title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
-
+        #print(sub["title"])
         postList = []
-        """
+
         for comment in submission.comments.list():
-            temp_list.append(comment.body)
-        for comment in tokens(temp_list):
+            tokenised = tokens(str(comment.body))
             postList.append(la.Post(tokens=comment, time=sub["time"],
                                user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"]))
-        """
         temp_list.clear()
         yield (title_selftext, postList)
 
@@ -136,7 +138,7 @@ def in_subreddit(reddit, submissions):
 
 
 def __main__():
-    reddit_and_subs = make_reddit_instance(2017, 1, 1, 'worldnews',10)
+    reddit_and_subs = make_reddit_instance()
     #return in_subreddit(reddit_and_subs)
     #for x in in_subreddit(reddit_and_subs):
         #print(x[0].tokens)
