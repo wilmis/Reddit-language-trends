@@ -119,11 +119,13 @@ def in_subreddit(reddit, submissions):
         title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
 
         postList = []
+        """
         for comment in submission.comments.list():
             temp_list.append(comment.body)
         for comment in tokens(temp_list):
             postList.append(la.Post(tokens=comment, time=sub["time"],
                                user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"]))
+        """
         temp_list.clear()
         yield (title_selftext, postList)
 

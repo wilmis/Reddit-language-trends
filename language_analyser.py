@@ -54,9 +54,7 @@ class Corpus:
                     print("Got the same post twice")
         print("done")
 
-        print(self.posts) 
-
-        self.posts.append(postTuple)
+        print(len(self.posts)) 
 
     def sort_posts(self):
         self.posts.sort(key=lambda x:x.time)
