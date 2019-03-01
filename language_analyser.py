@@ -10,6 +10,7 @@ import datetime as dt
 import http.server
 import webbrowser
 
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 class Post:
     """ Representing data held in posts"""
@@ -67,7 +68,35 @@ class Corpus:
         Perform various analyses on the data.
         Save a high dimensional representation each post
         """
+        analyze = SentimentIntensityAnalyzer()
+        for tuples in self.posts:
+            ## Tuples: First index is posttitle + self text
+            ##         Second index is comments
+            print('Titel+Selftext : ')
+            print(tuples[0])
+            print('CommentList : ')
+            print(tuples[1])
+            polarity_comment_thread = analyze.polarity_scores(" ".join(tuples[1].tokens))
+            
+            polarity_title_text = analyze.polarity_scores(" ".join(tuples[0].tokens))            
+            print("Sentiment for post : " + str(polarity_title_text) + '\n' + "Sentiment for comments : " + str(polarity_comment_thread))
+                
 
+
+
+
+            
+        
+        ## TODO: Fixa meningslängd. Remove stopwords from count
+        for tuples in self.posts:
+            len_count = 0
+            for text in tuples:
+                    len_count += 1
+                    sentence_length = len_count
+                   
+            
+        #print({"Sentence :":vs, })
+        ## TODO: Medelvärde av alla meningar för total sentiment av posten
         """self.posts[0].analyzed_data = {"sentiment": [0.5, 0.1, 0.3], "length": 30, "complexity": 0.92}
         self.posts[1].analyzed_data = {"sentiment": [0.8, 0.2, 0.8], "length": 10, "complexity": 0.12}"""
 
