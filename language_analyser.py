@@ -54,7 +54,7 @@ class Corpus:
                     print("Got the same post twice")
         print("done")
 
-        print(len(self.posts)) 
+        print(len(self.posts))
 
     def sort_posts(self):
         self.posts.sort(key=lambda x:x.time)
@@ -112,10 +112,10 @@ def main():
         subreddits.append("worldnews")
 
     # TODO: add to argument parser
-    posts = 500
+    posts = 50000
     read_from_cache = False
     save_to_cache = True
-    remove_previous_stage_caches = True
+    remove_previous_stage_caches = False
 
     save_cache_to_server = False # TODO
     get_cache_from_server = False # TODO
@@ -141,10 +141,10 @@ def main():
                     # The data is collected from reddit and corpuses are stored in a dictionary
                     print("\nCreating corpus: /r/"+subreddit)
                     corpus = Corpus(subreddit)
-                    
+
                     time_start = int(dt.datetime(2012, 2, 4).timestamp())
                     time_stop = int(dt.datetime(2019, 2, 4).timestamp())
-                    corpus.build(reddit, pushshift_api, time_start, time_stop, 50)
+                    corpus.build(reddit, pushshift_api, time_start, time_stop, posts)
 
                     if save_to_cache:
                         corpus_to_file(corpus, built_path)
