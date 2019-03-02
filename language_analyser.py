@@ -24,13 +24,86 @@ class Post:
         self.is_comment = is_comment
         self.parentPost = parentPost
         self.url = url
-        # TODO: add language?
+        
+        self.sanitized_tokens = None
+
 
         # Feature representation of the post
         self.analyzed_data = {}
 
         # Analyzed data with reduced dimensionality
         self.reduced_data = ()
+    
+    @property
+    def sanitized(self):
+        bad_tokens = ["*", "~", "^","`", ">"]
+        bad_combinations =  [["[", "deleted", "]"],
+                             ["[", "raderat", "]"],
+                             ["[", "borttagen", "]"],
+                             [">","!"], ["!","<"]]
+
+        if not hasattr(self, 'sanitized_tokens'):
+            self.sanitized_tokens = None
+
+        if self.sanitized_tokens is None:
+            self.sanitized_tokens = []
+
+            for token_sentence in self.tokens:
+                sanitized_sentence = []
+
+                # Remove single bad token
+                sanitized_sentence = filter(lambda t: not t in bad_tokens, token_sentence)
+                sanitized_sentence = list(sanitized_sentence)
+
+                # Remove bad token combination
+                for comb in bad_combinations:
+                    next_index = 0
+                    i = 0
+                    while i != len(sanitized_sentence):
+                        if sanitized_sentence[i] == comb[next_index]:
+                            next_index += 1
+                        else:
+                            next_index = 0
+
+                        if next_index == len(comb):
+                            del sanitized_sentence[i-len(comb)+1:i+1]
+                            i = i - len(comb)
+                            next_index = 0
+                        i += 1
+                # This doesn't work when divided up into sentences.
+                """
+                # Remove links
+                i = 0
+                content_start, content_end = 0, 0
+                next_index = 0
+                while i != len(sanitized_sentence):
+                    if next_index == 0 and sanitized_sentence[i] == "[":
+                        next_index = 1
+                        content_start = i + 1
+
+                    if next_index == 1 and sanitized_sentence[i] == "]":
+                        next_index = 2
+                        content_end = i
+                    
+                    if next_index == 2 and sanitized_sentence[i] == "(":
+                        next_index = 3
+                    else:
+                        next_index = 0
+
+                    if next_index == 3 and sanitized_sentence[i] == ")":
+                        next_index = 0
+                        keep = sanitized_sentence[content_start:content_end]
+                        del sanitized_sentence[content_start-1, i+1]
+                        sanitized_sentence += keep
+                        i = content_start - 1
+
+                    i += 1
+                """
+                
+                if sanitized_sentence != []:
+                    self.sanitized_tokens.append(sanitized_sentence)
+
+        return self.sanitized_tokens
 
 class Corpus:
     def __init__(self, subreddit):
@@ -52,7 +125,7 @@ class Corpus:
             print("\r{0} %".format(int((t-time_start)/(time_stop-time_start)*100)), end="\r")
             q = prc.query(reddit, pushshift_api, t, self.subreddit, 1)
             for p in q:
-                if len([c for x in self.posts if x.id == p[0].id]) == 0: # FIXME: this is slow and ugly
+                if len([1 for x in self.posts if x.id == p[0].id]) == 0: # FIXME: this is slow and ugly
                     self.posts.append(p[0])
                 else:
                     print("Got the same post twice")
