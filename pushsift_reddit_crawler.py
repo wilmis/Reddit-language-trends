@@ -33,12 +33,13 @@ def tokens(source):
 
     if return_list[-1] == []:
         del return_list[-1]
-    print(return_list)
+
     if return_list == []:
         print("WRONG:")
         print(repr(source))
-    yield return_list
-    return_list.clear()
+
+    return return_list
+
 
 
 def make_reddit_instance():
@@ -99,22 +100,20 @@ def in_subreddit(reddit, submissions):
     for submission_id in submissions:
         submission = reddit.submission(id=submission_id)
 
-        sub = {"title" :[], "selftext":[], "time":[], "comments":[], "url":[]}
-        temp_list=[]
-        temp_list.append(submission.title)
+        sub = {"title" :[], "selftext":[], "time":[],  "comments":[], "url":[]}
+
         for word in tokens(submission.title):
             sub["title"].append(word)
         #print(submission.title)  # Output: the submission's title
-        temp_list.clear()
-        temp_list.append(submission.selftext)
-        for word in tokens(submission.selftext):
-            sub["selftext"].append(word)
+
+        if submission.is_self:
+            for word in tokens(submission.selftext):
+                sub["selftext"].append(word)
+
         # FIXME: replace_more slows down the script ALOT, top comments instead
 
         submission.comments.replace_more(limit=0)
-        temp_list.clear()
         for comment in submission.comments.list():
-            print(repr(comment.body))
             sub["comments"].append(tokens(str(comment.body)))
 
         sub["time"]= submission.created_utc # tid när subbmission skapades
@@ -128,11 +127,10 @@ def in_subreddit(reddit, submissions):
             tokenised = tokens(str(comment.body))
             postList.append(la.Post(tokens=comment, time=sub["time"],
                                user="Unavailible", is_comment=True, parentPost=title_selftext,url=sub["url"]))
-        temp_list.clear()
         yield (title_selftext, postList)
 
         #print(datetime.fromtimestamp(title_selftext.time))
-        #list_to_return.append((title_selftext, comments))
+        #list_to_return.append((title_selftext, postList))
     #return list_to_return
 
 
