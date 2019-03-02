@@ -9,6 +9,8 @@ import os
 import datetime as dt
 import http.server
 import webbrowser
+from collections import Counter
+import math
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
@@ -141,18 +143,78 @@ class Corpus:
         Perform various analyses on the data.
         Save a high dimensional representation each post
         """
+
+        vocabulary = Counter()
         analyze = SentimentIntensityAnalyzer()
-        for tuples in self.posts:
+
+        i = 0
+        for post in self.posts:
+            print("\r{0} %".format(int(i/len(self.posts)*90)), end="\r")
+            i += 1
             ## Tuples: First index is posttitle + self text
             ##         Second index is comments
-            print('Titel+Selftext : ')
-            print(tuples[0])
-            print('CommentList : ')
-            print(tuples[1])
-            polarity_comment_thread = analyze.polarity_scores(" ".join(tuples[1].tokens))
+            #polarity_tuples = analyze.polarity_scores(" ".join(post.tokens))
+            #print(polarity_tuples)
+            sentiments = {"neg":[], "neu":[], "pos":[], "compound":[]}
+            flat_sanitized = [item for sublist in post.sanitized for item in sublist]
+
+            average_token_length = 0
+            for token in flat_sanitized:
+                vocabulary[token] += 1
+                average_token_length += len(token)
+            average_token_length /= len(flat_sanitized)
+
+            average_sentence_length = 0
+            for sentence in post.sanitized:
+                average_sentence_length += len(sentence)
+
+                polarity_text = analyze.polarity_scores(" ".join(sentence))
+                for key, value in polarity_text.items():
+                    sentiments[key].append(value)
+
+            average_sentence_length /= len(post.sanitized)
+
+            for key, value in sentiments.items():
+                sentiments[key] = sum(sentiments[key]) / len(sentiments[key])
             
-            polarity_title_text = analyze.polarity_scores(" ".join(tuples[0].tokens))            
-            print("Sentiment for post : " + str(polarity_title_text) + '\n' + "Sentiment for comments : " + str(polarity_comment_thread))
+
+            post.analyzed_data = {
+                "Post length" : len(flat_sanitized),
+                "Average sentence length" : average_sentence_length,
+                "Average token length" : average_token_length,
+
+                "Sentiment negative" : sentiments["neg"], # Will these cause problems with t-sne because they are too similar?
+                "Sentiment neutral" : sentiments["neu"],
+                "Sentiment positive" : sentiments["pos"]
+            }
+                
+            #print("Sentiments:", sentiments)
+            #polarity_comment_thread = analyze.polarity_scores(" ".join(post[1].tokens))
+            #print("Sentiment for post : " + str(polarity_title_text) + '\n' + "Sentiment for comments : " + str(polarity_comment_thread))
+
+        total = sum(vocabulary.values(), 0.0)
+        for key in vocabulary:
+            vocabulary[key] = math.log(vocabulary[key]/total) 
+
+        i = 0
+        for post in self.posts:
+            print("\r{0} %".format(int(i/len(self.posts)*10+90)), end="\r")
+            i += 1
+
+            flat_sanitized = [item for sublist in post.sanitized for item in sublist]
+            average_probability = 0
+            for token in flat_sanitized:
+                average_probability += vocabulary[token]
+            average_probability /= len(flat_sanitized)
+
+            post.analyzed_data["Average word probability"] = average_probability
+
+            print("\n")
+            print(" ".join(flat_sanitized))
+            for key, value in post.analyzed_data.items():
+                print(key, ":", value)
+
+        print("done")
                 
 
 
@@ -161,11 +223,11 @@ class Corpus:
             
         
         ## TODO: Fixa meningslängd. Remove stopwords from count
-        for tuples in self.posts:
-            len_count = 0
-            for text in tuples:
-                    len_count += 1
-                    sentence_length = len_count
+        #for tuples in self.posts:
+        #    len_count = 0
+        #    for text in tuples:
+        #            len_count += 1
+        #            sentence_length = len_count
                    
             
         #print({"Sentence :":vs, })
@@ -218,10 +280,10 @@ def main():
 
     # TODO: add to argument parser
     server_port = 8000
-    posts = 50000
+    posts = 100
 
     read_from_cache = True
-    save_to_cache = True
+    save_to_cache = False
     remove_previous_stage_caches = False
 
     save_cache_to_server = False # TODO
@@ -249,8 +311,8 @@ def main():
                     print("\nCreating corpus: /r/"+subreddit)
                     corpus = Corpus(subreddit)
 
-                    time_start = int(dt.datetime(2013, 1, 1).timestamp())
-                    time_stop = int(dt.datetime(2019, 1, 1).timestamp())
+                    time_start = int(dt.datetime(2012, 2, 4).timestamp())
+                    time_stop = int(dt.datetime(2019, 2, 4).timestamp())
                     corpus.build(reddit, pushshift_api, time_start, time_stop, posts)
 
                     if save_to_cache:
@@ -291,8 +353,8 @@ def main():
     httpd = http.server.HTTPServer(server_address, http.server.SimpleHTTPRequestHandler)
     print("Starting http server")
     httpd.serve_forever()
-
-
+    
+    
 
 
 if __name__ == "__main__":
