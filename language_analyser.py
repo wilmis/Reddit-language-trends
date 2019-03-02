@@ -267,28 +267,42 @@ def main():
     """ Generate, analyze, cluster and visualize data from given subreddits """
 
     # Figure out what algoritms the user wants to analyze.
-    # This is fed into the program by typing for example:
-    # python language_analyzer.py aww me_irl
-    parser = argparse.ArgumentParser(description="What to analyse")
-    parser.add_argument('subreddit', metavar="s", type=str, nargs='*',
-                        help='What subreddits to analyze')
+
+    parser = argparse.ArgumentParser(description='what to analyse')
+    parser.add_argument('subreddit', metavar='s', type=str, nargs='*', help='which subreddits to analyze')
+    parser.add_argument('-p', '--port', default=8000, type=int, help='what port to open the http visualization server on')
+    parser.add_argument('-n', '--number', default=200, type=int, help='how many posts to get from every subreddit')
+    
+    parser.add_argument('-r', '--readcache', action='store_true', help='use cached files if they exist')
+    parser.add_argument('-w', '--writecache', action='store_true', help='write generated data to cache files')
+    parser.add_argument('-c', '--cleancache', action='store_true', help='remove previous stage caches')
+    
+    def valid_date(s):
+        try:
+            return dt.datetime.strptime(s, "%Y-%m-%dT%H:%M%z")
+        except ValueError:
+            msg = "Not a valid date: '{0}'.".format(s)
+            raise argparse.ArgumentTypeError(msg)
+    
+    parser.add_argument("-s", "--starttime", type=valid_date, required=True, help="datetime when to start collection - format YYYY-MM-DDThh:mmTZD\nex:2015-03-04T05:32+0100")
+    parser.add_argument("-e", "--endtime", type=valid_date, required=True, help="datetime when to end collection - format YYYY-MM-DDThh:mmTZD\nex:2015-03-04T05:32+0100")
+                        
     args = parser.parse_args()
+    
     subreddits = args.subreddit
     # If no subreddits, use /r/worldnews as default
     if len(subreddits) == 0:
         subreddits.append("worldnews")
-
-    # TODO: add to argument parser
-    server_port = 8000
-    posts = 100
-
-    read_from_cache = True
-    save_to_cache = False
-    remove_previous_stage_caches = False
-
-    save_cache_to_server = False # TODO
-    get_cache_from_server = False # TODO
-
+    
+    server_port = args.port
+    posts = args.number
+    
+    starttime = args.starttime
+    endtime = args.endtime
+    
+    read_from_cache = args.readcache
+    save_to_cache = args.writecache
+    remove_previous_stage_caches = args.cleancache
     reddit, pushshift_api = prc.make_reddit_instance()
 
     corpuses = {}
@@ -311,8 +325,8 @@ def main():
                     print("\nCreating corpus: /r/"+subreddit)
                     corpus = Corpus(subreddit)
 
-                    time_start = int(dt.datetime(2012, 2, 4).timestamp())
-                    time_stop = int(dt.datetime(2019, 2, 4).timestamp())
+                    time_start = int(starttime.timestamp())
+                    time_stop = int(endtime.timestamp())
                     corpus.build(reddit, pushshift_api, time_start, time_stop, posts)
 
                     if save_to_cache:
@@ -331,6 +345,7 @@ def main():
 
             # This data is then converted into 2D points
             print("\nReducing corpus representation: /r/" + subreddit)
+            corpus.sort_posts()
             corpus.reduce_data_dimensions()
 
             if save_to_cache:
@@ -354,8 +369,6 @@ def main():
     print("Starting http server")
     httpd.serve_forever()
     
-    
-
 
 if __name__ == "__main__":
     main()
