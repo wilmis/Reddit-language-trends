@@ -22,22 +22,27 @@ else:
     print("Theano not found.")
 
     
-def Dynamic_tSNE_reduce_dimensions(corpus, timespan, steps):
+def Dynamic_tSNE_reduce_dimensions(corpus, timespan, steps, n_epochs, perplexity):
     # Sanity checks
     assert theano_found, \
         "Cannot use Dynamic t-SNE without Theano library."
     assert (len(corpus.posts) != 0), \
         "No posts in the corpus"
 
-    min_time = corpus.posts[0].time
-    max_time = corpus.posts[-1].time
-    step_size = (max_time - timespan) / steps
+
+    min_time = int(corpus.posts[0].time)
+    max_time = int(corpus.posts[-1].time)
+    timespan = int(timespan)
+    
+    step_size = (max_time - min_time - timespan) // steps
+    print(step_size)
     
     times = [post.time for post in corpus.posts]
     
     Xs = []
     IDs = []
-    for tmin in np.arange(min_time, max_time - timespan, step_size):
+    i = 0
+    for tmin in range(min_time, max_time - timespan, step_size):
         tmax = tmin + timespan
         left = bisect.bisect_right(times, tmin)
         right = bisect.bisect_left(times, tmax)
@@ -48,11 +53,12 @@ def Dynamic_tSNE_reduce_dimensions(corpus, timespan, steps):
             x.append(list(post.analyzed_data.values()))
             ids.append(post.id)
         
-        print(str(len(x))+"   "+str(tmin)+"  ->  "+str(tmax))
+        print(str(i)+ " "+str(len(x))+"  |  "+str(tmin)+"  ->  "+str(tmax))
         Xs.append(np.array(x))
         IDs.append(ids)
+        i += 1
     
-    Ys = dynamic_tsne(Xs, IDs, perplexity=50, n_epochs=2500, initial_lr=200, final_lr=80, lmbda=0.1, verbose=1, sigma_iters=60,
+    Ys = dynamic_tsne(Xs, IDs, perplexity=perplexity, n_epochs=n_epochs, initial_lr=200, final_lr=80, lmbda=0.1, verbose=1, sigma_iters=60,
                       initial_momentum = 0.4)
 
     #for Y in Ys:

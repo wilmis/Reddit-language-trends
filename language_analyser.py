@@ -244,7 +244,7 @@ class Corpus:
         """self.posts[0].analyzed_data = {"sentiment": [0.5, 0.1, 0.3], "length": 30, "complexity": 0.92}
         self.posts[1].analyzed_data = {"sentiment": [0.8, 0.2, 0.8], "length": 10, "complexity": 0.12}"""
 
-    def reduce_data_dimensions(self):
+    def reduce_data_dimensions(self, timespan, steps, epochs, perplexity):
         """
         Uses a dimensionality reduction algorithm to convert the high dimensional into
         2D points for every post.
@@ -254,7 +254,7 @@ class Corpus:
         self.sort_posts()
         
         try:
-            dr.Dynamic_tSNE_reduce_dimensions(self, dt.timedelta(days=300).total_seconds(), 200)
+            dr.Dynamic_tSNE_reduce_dimensions(self, dt.timedelta(days=timespan).total_seconds(), steps, epochs, perplexity)
         except AssertionError:
             print("Can't reduce data. Is theano installed?")
 
@@ -309,6 +309,7 @@ def main():
     parser.add_argument('-r', '--readcache', action='store_true', help='use cached files if they exist')
     parser.add_argument('-w', '--writecache', action='store_true', help='write generated data to cache files')
     parser.add_argument('-c', '--cleancache', action='store_true', help='remove previous stage caches')
+   
     
     def valid_date(s):
         try:
@@ -319,6 +320,11 @@ def main():
     
     parser.add_argument("-s", "--starttime", type=valid_date, required=True, help="datetime when to start collection - format YYYY-MM-DDThh:mmTZD\nex:2015-03-04T05:32+0100")
     parser.add_argument("-e", "--endtime", type=valid_date, required=True, help="datetime when to end collection - format YYYY-MM-DDThh:mmTZD\nex:2015-03-04T05:32+0100")
+    
+    parser.add_argument('-tt', '--tsne_timespan', default=250, type=float, help='How many days the timespan covers')
+    parser.add_argument('-ts', '--tsne_steps', default=200, type=int, help='How many steps the data is divided into')
+    parser.add_argument('-te', '--tsne_epochs', default=2000, type=int, help='How many epochs are spent to reduce the data')
+    parser.add_argument('-tp', '--tsne_perplexity', default=40, type=int, help='t-sne perplexity - reduce or increase if numbers become invalid')
                         
     args = parser.parse_args()
     
@@ -379,7 +385,7 @@ def main():
 
             # This data is then converted into 2D points
             print("\nReducing corpus representation: /r/" + subreddit)
-            corpus.reduce_data_dimensions()
+            corpus.reduce_data_dimensions(args.tsne_timespan, args.tsne_steps, args.tsne_epochs, args.tsne_perplexity)
 
             if save_to_cache:
                 corpus_to_file(corpus, reduced_path)
