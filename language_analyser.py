@@ -5,20 +5,20 @@ import dimensionality_reducer as dr
 
 import argparse
 import uuid
-import pickle
+import json
 import os
 import datetime as dt
 import http.server
 import webbrowser
 from collections import Counter
 import math
+import numpy as np
 
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 class Post:
     """ Representing data held in posts"""
-
-    def __init__(self, tokens, time, user, is_comment, parentPost, url):
+    def __init__(self, tokens=None, time=None, user=None, is_comment=None, parentPost=None, url=None):
         """Initiate with data about the post obtained from crawler"""
         self.id = uuid.uuid4().hex
         self.tokens = tokens
@@ -110,7 +110,7 @@ class Post:
 
 
 class Corpus:
-    def __init__(self, subreddit):
+    def __init__(self, subreddit=None):
         self.subreddit = subreddit
         self.posts = []
         self.time_start = None
@@ -262,15 +262,34 @@ class Corpus:
             
 def corpus_from_file(path):
     print("Using existsing corpus file: "+path)
-    corpus_file = open(path, mode='rb')
-    corpus = pickle.load(corpus_file)
+    corpus_file = open(path, mode='r')
+    jcorpus = json.load(corpus_file)
     corpus_file.close()
+    
+    posts = []
+    for jpost in jcorpus["posts"]:
+        post = Post()
+        post.__dict__.update(**jpost)
+        posts.append(post)
+    
+    del jcorpus["posts"]
+    
+    corpus = Corpus()
+    corpus.__dict__.update(**jcorpus)
+    corpus.posts = posts
+
     return corpus
 
 def corpus_to_file(corpus, path):
+
+    def decoder(obj):
+        if isinstance(obj, np.float32):
+            return float(obj)
+        return obj.__dict__
+    
     print("Saving built corpus to: "+path)
-    corpus_file = open(path, mode='wb')
-    pickle.dump(corpus, corpus_file)
+    corpus_file = open(path, mode='w')
+    json.dump(corpus, corpus_file, default=decoder)
     corpus_file.close()
 
 def remove_corpus_file(path):
@@ -324,9 +343,9 @@ def main():
     corpuses = {}
     for subreddit in subreddits:
         cache_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "caches")
-        built_path = os.path.join(cache_path, subreddit+"_1built_"+str(posts)+".pickle")
-        analyzed_path = os.path.join(cache_path, subreddit+"_2analyzed_"+str(posts)+".pickle")
-        reduced_path = os.path.join(cache_path, subreddit+"_3reduced_"+str(posts)+".pickle")
+        built_path = os.path.join(cache_path, subreddit+"_1built_"+str(posts)+".json")
+        analyzed_path = os.path.join(cache_path, subreddit+"_2analyzed_"+str(posts)+".json")
+        reduced_path = os.path.join(cache_path, subreddit+"_3reduced_"+str(posts)+".json")
 
         if os.path.isfile(reduced_path) and read_from_cache:
             corpus = corpus_from_file(reduced_path)
