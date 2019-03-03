@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pushsift_reddit_crawler as prc
+import dimensionality_reducer as dr
 
 import argparse
 import uuid
@@ -107,20 +108,22 @@ class Post:
 
         return self.sanitized_tokens
 
+
 class Corpus:
     def __init__(self, subreddit):
         self.subreddit = subreddit
-        self.posts = []  # This is a list so we can sort it later
-        self.year = 2014
-        self.month = 1
-        self.day = 1
-        self.subLimit = 10
+        self.posts = []
+        self.time_start = None
+        self.time_stop = None
 
     def build(self, reddit, pushshift_api, time_start, time_stop, submissions):
         """
         Collects and generates a tokenized corpus for the given subreddit
         using the reddit_crawler
         """
+        
+        self.time_start = time_start
+        self.time_stop = time_stop
 
         # pushsift_reddit_crawler.py == prc
         for t in range(time_start, time_stop, int((time_stop-time_start)/submissions)):
@@ -157,12 +160,17 @@ class Corpus:
             #print(polarity_tuples)
             sentiments = {"neg":[], "neu":[], "pos":[], "compound":[]}
             flat_sanitized = [item for sublist in post.sanitized for item in sublist]
+            print(flat_sanitized)
+            print(post.url)
 
             average_token_length = 0
             for token in flat_sanitized:
                 vocabulary[token] += 1
                 average_token_length += len(token)
-            average_token_length /= len(flat_sanitized)
+            
+            average_token_length = 0
+            if flat_sanitized != []:
+                average_token_length /= len(flat_sanitized)
 
             average_sentence_length = 0
             for sentence in post.sanitized:
@@ -172,10 +180,15 @@ class Corpus:
                 for key, value in polarity_text.items():
                     sentiments[key].append(value)
 
-            average_sentence_length /= len(post.sanitized)
+            average_token_length = 0
+            if flat_sanitized != []:
+                average_sentence_length /= len(post.sanitized)
 
             for key, value in sentiments.items():
-                sentiments[key] = sum(sentiments[key]) / len(sentiments[key])
+                if len(sentiments[key]) == 0:
+                    sentiments[key] = 0
+                else:
+                    sentiments[key] = sum(sentiments[key]) / len(sentiments[key])
             
 
             post.analyzed_data = {
@@ -217,9 +230,6 @@ class Corpus:
         print("done")
                 
 
-
-
-
             
         
         ## TODO: Fixa meningslängd. Remove stopwords from count
@@ -241,10 +251,15 @@ class Corpus:
         2D points for every post.
         Returns a list of these 2D points.
         """
+        
+        self.sort_posts()
+        
+        try:
+            dr.Dynamic_tSNE_reduce_dimensions(self, dt.timedelta(days=300).total_seconds(), 200)
+        except AssertionError:
+            print("Can't reduce data. Is theano installed?")
 
-        self.posts[0].reduced_data = (0.3, 0.7)
-        self.posts[1].reduced_data = (0.8, 0.5)
-
+            
 def corpus_from_file(path):
     print("Using existsing corpus file: "+path)
     corpus_file = open(path, mode='rb')
@@ -303,6 +318,7 @@ def main():
     read_from_cache = args.readcache
     save_to_cache = args.writecache
     remove_previous_stage_caches = args.cleancache
+    
     reddit, pushshift_api = prc.make_reddit_instance()
 
     corpuses = {}
@@ -345,7 +361,6 @@ def main():
 
             # This data is then converted into 2D points
             print("\nReducing corpus representation: /r/" + subreddit)
-            corpus.sort_posts()
             corpus.reduce_data_dimensions()
 
             if save_to_cache:
@@ -354,8 +369,6 @@ def main():
             if remove_previous_stage_caches:
                 remove_corpus_file(built_path)
                 remove_corpus_file(analyzed_path)
-
-
 
         corpuses[subreddit] = corpus
 
