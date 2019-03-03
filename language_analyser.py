@@ -2,14 +2,13 @@
 
 import pushsift_reddit_crawler as prc
 import dimensionality_reducer as dr
+from start_server import start_server
 
 import argparse
 import uuid
 import json
 import os
 import datetime as dt
-import http.server
-import webbrowser
 from collections import Counter
 import math
 import numpy as np
@@ -391,15 +390,7 @@ def main():
 
         corpuses[subreddit] = corpus
 
-    # Open website in default browser
-    print("Hosting in default webbrowser on: "+"http://localhost:"+str(server_port))
-    webbrowser.open("http://localhost:"+str(server_port))
-
-    # Open HTTP-server
-    server_address = ('', server_port)
-    httpd = http.server.HTTPServer(server_address, http.server.SimpleHTTPRequestHandler)
-    print("Starting http server")
-    httpd.serve_forever()
+    start_server(server_port)
     
 
 if __name__ == "__main__":
