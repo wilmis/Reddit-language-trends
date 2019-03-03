@@ -1,1 +1,132 @@
-<h1> HELLO </h1>
+<!doctype html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Reddit langage analysis</title>
+    
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.1/d3.js"></script>
+    
+    <style>
+        body {
+            font-family: Consolas, monaco, monospace;
+            height: 100vh;
+        }
+        
+ 
+        #subreddits {
+            cursor: pointer;
+            font-size: 24px;
+            list-style-type: none;
+            user-select: none;
+            position: fixed;
+        }
+        
+        #scatter {
+            background-color: #ccc;
+            width: 100%;
+            height: 90%; 
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);            
+        }
+    </style>
+    
+</head>
+
+<body>
+
+    <ul id="subreddits">
+        
+    </ul>
+    
+    <svg id="scatter">
+        
+    </svg>
+
+    <script type='text/javascript'>
+    
+        $(function(){
+        
+            function viewSubreddit(filename, subreddit){
+                stage = 1 + 1*filename.includes("_2analyzed_") + 2*filename.includes("_3reduced_");
+                
+                console.log(subreddit.posts)
+                
+                time = 2
+                
+                
+                
+                var scatterSvg = d3.select("#scatter");
+                var scatter = d3.select("#scatter").append("g");
+                
+                width = $("#scatter").width();
+                height = $("#scatter").height();
+                
+                var scale = 40;
+                
+                scatter.selectAll("circle")
+                    .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
+                        return time in post.reduced_data;
+                    }))
+                    .enter()
+                    .append('circle')
+                    .attr('cx', function(post){
+                        return post.reduced_data[time][0]*scale+width/2;
+                    })
+                    .attr('cy', function(post){
+                        return post.reduced_data[time][1]*scale+height/2;
+                    })
+                    .attr('r', 2);
+            }
+            
+            function unviewSubreddit(filename){
+                // TODO
+            }
+        
+            function getSubreddit(subreddit, callback){
+                console.log(subreddit)
+                var request = new XMLHttpRequest();
+                request.open('GET', '/caches/'+subreddit);
+                request.onload = function() {
+                    callback(JSON.parse(request.response))
+                }
+                request.send();
+            }
+    
+            var request = new XMLHttpRequest();
+            
+            request.open('GET', '/caches/')
+            request.onload = function() {
+                $($.parseHTML(request.response)).find( "a" ).each(function(index) {
+                    if ($(this).text()[0] != "." && $(this).text().includes(".json")){
+                        $("#subreddits").append("<li class='sub'>"+$(this).text()+"</li>");
+                    }
+                })
+
+            }
+            request.send();
+            
+            $(document).on("click", ".sub", function(){
+                if ($(this).css("font-weight") == "700"){
+                    $(this).css("font-weight","400"); 
+                    filename = $(this).html();
+                    unviewSubreddit(filename)
+                }
+                else {
+                    $(this).css("font-weight","700");
+                    filename = $(this).html();
+                    getSubreddit(filename, function(subreddit){
+                        viewSubreddit(filename, subreddit);
+                    })                    
+                }
+            });
+                    
+        })
+        
+    </script>
+
+</body>
+
+</html>
