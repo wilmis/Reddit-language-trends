@@ -117,7 +117,7 @@ def in_subreddit(reddit, submissions):
             sub["comments"].append(tokens(str(comment.body)))
 
         sub["time"]= submission.created_utc # tid när subbmission skapades
-        sub["url"] = submission.url   # Output: the URL the submission points to
+        sub["url"] = submission.permalink   # Output: the URL to the submission
         #pprint.pprint(vars(submission))
         title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
         #print(sub["title"])
