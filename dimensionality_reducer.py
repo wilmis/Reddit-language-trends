@@ -61,7 +61,9 @@ def Dynamic_tSNE_reduce_dimensions(corpus, timespan, steps):
     for t in range(len(Ys)):
         for i in range(len(Ys[t])):
             post = next((p for p in corpus.posts if p.id == IDs[t][i]), None)
-            post.reduced_data = tuple(Ys[t][i])
+            if not isinstance(post.reduced_data, dict): # Some old files had this as a tuple
+                post.reduced_data = {}
+            post.reduced_data[t] = tuple(Ys[t][i])
 
 
 def generate_fake_data(n, dt):
