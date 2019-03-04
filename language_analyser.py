@@ -129,7 +129,7 @@ class Corpus:
             print("\r{0} %".format(int((t-time_start)/(time_stop-time_start)*100)), end="\r")
             q = prc.query(reddit, pushshift_api, t, self.subreddit, 1)
             for p in q:
-                if len([1 for x in self.posts if x.id == p[0].id]) == 0: # FIXME: this is slow and ugly
+                if len([1 for x in self.posts if x.time == p[0].time]) == 0: # FIXME: this is slow and ugly
                     self.posts.append(p[0])
                 else:
                     print("Got the same post twice")
