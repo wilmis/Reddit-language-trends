@@ -16,13 +16,23 @@
             height: 100vh;
         }
         
+        #legends {
+            position: fixed;
+        }
  
         #subreddits {
             cursor: pointer;
             font-size: 24px;
             list-style-type: none;
             user-select: none;
-            position: fixed;
+        }
+        
+        #metrics {
+            cursor: pointer;
+            color: #777;
+            font-size: 15px;
+            list-style-type: none;
+            user-select: none;
         }
         
         #scatter {
@@ -36,10 +46,11 @@
 </head>
 
 <body>
-
-    <ul id="subreddits">
-        
-    </ul>
+    <div id="legends">
+        <ul id="subreddits"></ul>
+        <hr>
+        <ul id="metrics"></ul>
+    </div>
     
     <svg id="scatter">
         
@@ -49,41 +60,127 @@
     
         $(function(){
         
-            function viewSubreddit(filename, subreddit){
+            var scatterSvg = d3.select("#scatter");
+            var scatter = d3.select("#scatter").append("g");
+            var timestep = 0;
+            var selectedSubreddits = {};
+            var metrics = [];
+            var selectedMetrics = {};
+            
+            const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
+                            '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff',
+                            '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1',
+                            '#000075', '#808080', '#ffffff'];
+            
+            function selectSubreddit(filename, subreddit){
+                $(".sub_"+filename.slice(0, -5)).css("font-weight","700");
+                
+                for (key in selectedSubreddits){
+                    deselectSubreddit(key); // Only one sub at the time.
+                }
+                
+                selectedSubreddits[filename] = subreddit;
+                
                 stage = 1 + 1*filename.includes("_2analyzed_") + 2*filename.includes("_3reduced_");
                 
-                console.log(subreddit.posts)
+                // Find and append metrics being used.
+                if (subreddit.posts.length != 0){
+                    metrics = Object.keys(subreddit.posts[0]["analyzed_data"]);
+                }
                 
-                time = 2
-                
-                
-                
-                var scatterSvg = d3.select("#scatter");
-                var scatter = d3.select("#scatter").append("g");
+                for (metric in metrics){
+                    $("#metrics").append("<li class='met "+"sub_"+filename.slice(0,-5)+"'>"+metrics[metric]+"</li>");
+                }
                 
                 width = $("#scatter").width();
                 height = $("#scatter").height();
                 
-                var scale = 40;
+                if (stage == 3){
+                    // Add points
+                    var scale = 40;
                 
-                scatter.selectAll("circle")
-                    .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
-                        return time in post.reduced_data;
-                    }))
-                    .enter()
-                    .append('circle')
-                    .attr('cx', function(post){
-                        return post.reduced_data[time][0]*scale+width/2;
-                    })
-                    .attr('cy', function(post){
-                        return post.reduced_data[time][1]*scale+height/2;
-                    })
-                    .attr('r', 2);
+                    scatter.selectAll("circle.sub_"+filename)
+                        .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
+                            return timestep in post.reduced_data;
+                        }, function(post){
+                            return post.id;
+                        }))
+                        .enter()
+                        .append('circle')
+                        .classed('sub_'+filename.slice(0,-5), true)
+                        .attr('cx', function(post){
+                            return post.reduced_data[timestep][0]*scale+width/2;
+                        })
+                        .attr('cy', function(post){
+                            return post.reduced_data[timestep][1]*scale+height/2;
+                        })
+                        .attr('r', 0)
+                        .transition()
+                            .delay(function(post){
+                                var x = post.reduced_data[timestep][0];
+                                var y = post.reduced_data[timestep][1];
+                                return Math.sqrt(x*x+y*y)*10;
+                            })
+                            .attr('r', 2);
+                }
+                
+                
             }
             
-            function unviewSubreddit(filename){
-                // TODO
+            function deselectSubreddit(filename){
+                $(".sub_"+filename.slice(0, -5)).css("font-weight","400"); 
+                delete selectedSubreddits[filename];
+                
+                $("#metrics .sub_"+filename.slice(0, -5)).remove();
+                
+                scatter.selectAll(".sub_"+filename.slice(0,-5))
+                    .transition()
+                        .delay(function(post){
+                            var x = post.reduced_data[timestep][0];
+                            var y = post.reduced_data[timestep][1];
+                            return Math.sqrt(x*x+y*y)*10;
+                        })
+                        .attr('r', 0)
+                        .remove();
             }
+            
+            $(document).on("click", ".sub", function(){
+                if ($(this).html() in selectedSubreddits){
+                    filename = $(this).html();
+                    deselectSubreddit(filename);
+                }
+                else {
+                    $(this).css("font-weight","700");
+                    filename = $(this).html();
+                    getSubreddit(filename, function(subreddit){
+                        selectSubreddit(filename, subreddit);
+                    });
+                }
+            });
+            
+            function selectMetric(metric, element){
+                element.css("font-weight", "700");
+                color = colors[metrics.indexOf(metric)];
+                
+                selectedMetrics[metric] = color;
+                element.css("color", color);
+            }
+            
+            function deselectMetric(metric, element){
+                element.css("font-weight", "400"); 
+                element.css("color", "");
+                delete selectedMetrics[metric];
+            }
+            
+            $(document).on("click", ".met", function(){
+                var metric = $(this).html();
+                if (metric in selectedMetrics){
+                    deselectMetric(metric, $(this));
+                }
+                else {
+                    selectMetric(metric, $(this));
+                }
+            });
         
             function getSubreddit(subreddit, callback){
                 console.log(subreddit)
@@ -99,29 +196,15 @@
             
             request.open('GET', '/caches/')
             request.onload = function() {
-                $($.parseHTML(request.response)).find( "a" ).each(function(index) {
+                $($.parseHTML(request.response)).find("a").each(function(index) {
                     if ($(this).text()[0] != "." && $(this).text().includes(".json")){
-                        $("#subreddits").append("<li class='sub'>"+$(this).text()+"</li>");
+                        $("#subreddits").append("<li class='sub "+"sub_"+$(this).text().slice(0,-5)+"'>"+$(this).text()+"</li>");
                     }
                 })
 
             }
             request.send();
             
-            $(document).on("click", ".sub", function(){
-                if ($(this).css("font-weight") == "700"){
-                    $(this).css("font-weight","400"); 
-                    filename = $(this).html();
-                    unviewSubreddit(filename)
-                }
-                else {
-                    $(this).css("font-weight","700");
-                    filename = $(this).html();
-                    getSubreddit(filename, function(subreddit){
-                        viewSubreddit(filename, subreddit);
-                    })                    
-                }
-            });
                     
         })
         

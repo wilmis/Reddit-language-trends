@@ -112,8 +112,13 @@ class Corpus:
     def __init__(self, subreddit=None):
         self.subreddit = subreddit
         self.posts = []
+        
         self.time_start = None
         self.time_stop = None
+        
+        self.timespan = None
+        self.reducer_steps = None
+        self.reducer_epocs = None
 
     def build(self, reddit, pushshift_api, time_start, time_stop, submissions):
         """
@@ -250,6 +255,10 @@ class Corpus:
         2D points for every post.
         Returns a list of these 2D points.
         """
+        
+        self.timespan = dt.timedelta(days=timespan).total_seconds()
+        self.reducer_steps = steps
+        self.reducer_epocs = epochs
         
         self.sort_posts()
         
