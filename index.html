@@ -16,6 +16,27 @@
             height: 100vh;
         }
         
+        #timeline {
+            width: 100%;
+            height: 5%;
+        }
+        
+        #timeline > .track {
+            stroke: #aaa;
+            stroke-width:1;
+        }
+        
+        #timeline > g > line {
+            stroke: #333;
+            stroke-width:2;
+        }
+        
+        #timeline > g > rect {
+            fill: #552222aa;
+            width: 5px;
+            height 5px;
+        }
+        
         #legends {
             position: fixed;
         }
@@ -53,7 +74,14 @@
     </div>
     
     <svg id="scatter">
-        
+    </svg>
+    
+    <svg id="timeline">
+        <line class="track" x1="10%" y1="50%" x2="90%" y2="50%"></line>
+        <g>
+            <line class="handle" x1="50%" y1="30%" x2="50%" y2="70%"></line>
+            <rect></rect>
+        </g>
     </svg>
 
     <script type='text/javascript'>
@@ -62,17 +90,23 @@
         
             var scatterSvg = d3.select("#scatter");
             var scatter = d3.select("#scatter").append("g");
+            var timeline = d3.select("#timeline");
+            var time = 0;
             var timestep = 0;
+            var maxTimesteps = 1;
             var selectedSubreddits = {};
             var metrics = [];
             var selectedMetrics = {};
+            
+            var scale = 40;
             
             const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
                             '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff',
                             '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1',
                             '#000075', '#808080', '#ffffff'];
-            
+ 
             function selectSubreddit(filename, subreddit){
+                console.log(subreddit);
                 $(".sub_"+filename.slice(0, -5)).css("font-weight","700");
                 
                 for (key in selectedSubreddits){
@@ -95,16 +129,21 @@
                 width = $("#scatter").width();
                 height = $("#scatter").height();
                 
-                if (stage == 3){
-                    // Add points
-                    var scale = 40;
                 
+                if (stage == 3){
+                    maxTimesteps = subreddit.reducer_steps;
+                    if (typeof maxTimesteps === 'undefined'){
+                        maxTimesteps = 200;
+                    }
+                    
+                    
+                     // Add points
                     scatter.selectAll("circle.sub_"+filename)
                         .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
                             return timestep in post.reduced_data;
-                        }, function(post){
+                        }), function(post){
                             return post.id;
-                        }))
+                        })
                         .enter()
                         .append('circle')
                         .classed('sub_'+filename.slice(0,-5), true)
@@ -114,6 +153,11 @@
                         .attr('cy', function(post){
                             return post.reduced_data[timestep][1]*scale+height/2;
                         })
+                        .on("click", function(post){
+                            console.log("click");
+                            window.open("https://www.reddit.com/"+post.url, '_blank');
+                            d3.event.stopPropagation();
+                        })
                         .attr('r', 0)
                         .transition()
                             .delay(function(post){
@@ -122,9 +166,19 @@
                                 return Math.sqrt(x*x+y*y)*10;
                             })
                             .attr('r', 2);
+                     
+                    updateTime();
+                    
+                    timeline.call(d3.drag()
+                        .on("start.interrupt", function() { timeline.interrupt(); })
+                        .on("start drag", function() {
+                            var bbox = timeline.select(".track").node().getBBox();
+                            time = Math.min(Math.max((d3.event.x - bbox.x) / bbox.width, 0), 1);
+                            updateTime();
+                        }));
+                            
+                    
                 }
-                
-                
             }
             
             function deselectSubreddit(filename){
@@ -158,18 +212,104 @@
                 }
             });
             
+            
+            function updateTime(){
+                timestep = Math.floor(time*maxTimesteps);
+                if (timestep == maxTimesteps){
+                    timestep -= 1;
+                }
+                
+                var bbox = timeline.select(".track").node().getBBox();
+                var handlePos = bbox.x + bbox.width * time;
+                timeline.select(".handle")
+                    .attr("x1", handlePos)
+                    .attr("x2", handlePos);
+                    
+                for (filename in selectedSubreddits){
+                    subreddit = selectedSubreddits[filename];
+                    filename = filename.slice(0,-5);
+
+                    var updated = scatter.selectAll("circle.sub_"+filename)
+                        .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
+                            return timestep in post.reduced_data;
+                        }), function(post){
+                            return post.id;
+                        });
+                    
+                    updated.exit()
+                        .remove()
+                    
+                    updated.enter()
+                        .append('circle')
+                        .classed('sub_'+filename, true)
+                        .attr('r', 2)
+                        .on("click", function(post){
+                            console.log("click");
+                            window.open("https://www.reddit.com/"+post.url, '_blank');
+                            d3.event.stopPropagation();
+                        })
+                    
+                    updated
+                        .attr('cx', function(post){
+                        return post.reduced_data[timestep][0]*scale+width/2;
+                        })
+                        .attr('cy', function(post){
+                            return post.reduced_data[timestep][1]*scale+height/2;
+                        });
+                    
+                    
+                }
+                
+                updateColors();
+            }
+            
+            function updateColors(){
+                if (selectedMetrics.length == 0){
+                    scatter.selectAll("circle").fill("fill", "#333");
+                }
+                else {
+                    scatter.selectAll("circle")
+                        .attr("fill", function(post){
+                            var avg = 0;
+                            for (metric in selectedMetrics){
+                                var normalized = post.analyzed_data[metric];
+                                if (metric == "Post length"){
+                                    normalized = normalized / (normalized + 50);
+                                }
+                                else if (metric == "Average sentence length"){
+                                    normalized = normalized / (normalized + 3);
+                                }
+                                else if (metric == "Average word probability"){
+                                    normalized = (normalized + 8.5) / 2.8
+                                }
+                                
+                                avg += normalized;
+                            }
+                            // TODO: do this in python automatically instead
+                            avg = avg / selectedMetrics.length;
+                            normalized = Math.max(Math.min(normalized, 0.99), 0);
+                            var hex = (Math.floor(normalized*255)).toString(16);
+                            return "#333"+hex;
+                        });
+                }
+                
+            }
+            
             function selectMetric(metric, element){
                 element.css("font-weight", "700");
                 color = colors[metrics.indexOf(metric)];
                 
                 selectedMetrics[metric] = color;
                 element.css("color", color);
+                
+                updateColors();
             }
             
             function deselectMetric(metric, element){
                 element.css("font-weight", "400"); 
                 element.css("color", "");
                 delete selectedMetrics[metric];
+                updateColors();
             }
             
             $(document).on("click", ".met", function(){
@@ -200,7 +340,7 @@
                     if ($(this).text()[0] != "." && $(this).text().includes(".json")){
                         $("#subreddits").append("<li class='sub "+"sub_"+$(this).text().slice(0,-5)+"'>"+$(this).text()+"</li>");
                     }
-                })
+                });
 
             }
             request.send();
