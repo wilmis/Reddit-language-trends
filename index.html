@@ -15,6 +15,11 @@
             font-family: Consolas, monaco, monospace;
             height: 100vh;
         }
+
+        .time {
+            position: absolute;
+            margin-right: 0px;
+        }
         
         #timeline {
             width: 100%;
@@ -72,8 +77,9 @@
         <hr>
         <ul id="metrics"></ul>
     </div>
-    
+
     <svg id="scatter">
+        <text id="nowTime" height="100%" x="10" y="20" fill="black"></text>
     </svg>
     
     <svg id="timeline">
@@ -97,6 +103,10 @@
             var selectedSubreddits = {};
             var metrics = [];
             var selectedMetrics = {};
+
+            var startTime = 0;
+            var endTime = 20;
+            var timespan = 20
             
             var scale = 40;
             
@@ -114,6 +124,10 @@
                 }
                 
                 selectedSubreddits[filename] = subreddit;
+                
+                startTime = subreddit.time_start;
+                endTime = subreddit.time_stop;
+                timespan = subreddit.timespan;
                 
                 stage = 1 + 1*filename.includes("_2analyzed_") + 2*filename.includes("_3reduced_");
                 
@@ -173,7 +187,7 @@
                         .on("start.interrupt", function() { timeline.interrupt(); })
                         .on("start drag", function() {
                             var bbox = timeline.select(".track").node().getBBox();
-                            time = Math.min(Math.max((d3.event.x - bbox.x) / bbox.width, 0), 1);
+                            time = Math.min(Math.max((d3.event.x - bbox.x) / bbox.width, 0), 1 - timespan/(endTime - startTime));
                             updateTime();
                         }));
                             
@@ -219,6 +233,11 @@
                     timestep -= 1;
                 }
                 
+                var d = new Date(0);
+                d.setUTCSeconds(time*(endTime - startTime) + startTime);
+                var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC', timeZoneName: 'short'};
+                scatterSvg.selectAll("#nowTime").html(d.toLocaleDateString('en-US', options));
+
                 var bbox = timeline.select(".track").node().getBBox();
                 var handlePos = bbox.x + bbox.width * time;
                 timeline.select(".handle")
