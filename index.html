@@ -9,6 +9,7 @@
     
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.1/d3.js"></script>
+    <script src="/javascripts/chroma.min.js"></script>
     
     <style>
         body {
@@ -147,6 +148,37 @@
                 
                 stage = 1 + 1*filename.includes("_2analyzed_") + 2*filename.includes("_3reduced_");
                 
+                // Normalize all analyzed data
+                metricMins = {};
+                metricMaxes = {};
+                if (2 <= stage){
+                    for (p in subreddit.posts){
+                        var post = subreddit.posts[p];
+                        for (met in post.analyzed_data){
+                            if (!metricMins.hasOwnProperty(met)){
+                                metricMins[met] = post.analyzed_data[met];
+                                metricMaxes[met] = post.analyzed_data[met];
+                            }
+                            else {
+                                metricMins[met] = Math.min(post.analyzed_data[met], metricMins[met]);
+                                metricMaxes[met] = Math.max(post.analyzed_data[met], metricMaxes[met]);
+                            }
+                        }
+                    }
+                    
+                    for (p in subreddit.posts){
+                        var post = subreddit.posts[p];
+                        post.normalized_data = {}
+                        for (met in post.analyzed_data){
+                            post.normalized_data[met] = (post.analyzed_data[met] - metricMins[met]) / (metricMaxes[met] - metricMins[met]);
+                            if (metricMaxes[met] - metricMins[met] == 0){
+                                post.normalized_data[met] = 0;
+                            }
+                        }
+                    }
+                }
+        
+                
                 // Find and append metrics being used.
                 if (subreddit.posts.length != 0){
                     metrics = Object.keys(subreddit.posts[0]["analyzed_data"]);
@@ -184,7 +216,6 @@
                             return post.reduced_data[timestep][1]*scale+height/2;
                         })
                         .on("click", function(post){
-                            console.log("click");
                             window.open("https://www.reddit.com/"+post.url, '_blank');
                             d3.event.stopPropagation();
                         })
@@ -259,7 +290,6 @@
                 for (key in post.analyzed_data){
                     str += key + ": " + post.analyzed_data[key]+ "<br>"
                 }
-                console.log(post);
 
                 d3.selectAll(".tooltip")
                     .style("left", (d3.event.x+4)+"px")
@@ -310,7 +340,6 @@
                         .classed('sub_'+filename, true)
                         .attr('r', 2)
                         .on("click", function(post){
-                            console.log("click");
                             window.open("https://www.reddit.com/"+post.url, '_blank');
                             d3.event.stopPropagation();
                         })
@@ -342,26 +371,14 @@
                 else {
                     scatter.selectAll("circle")
                         .attr("fill", function(post){
-                            var avg = 0;
+                            col = [];
                             for (metric in selectedMetrics){
-                                var normalized = post.analyzed_data[metric];
-                                if (metric == "Post length"){
-                                    normalized = normalized / (normalized + 50);
-                                }
-                                else if (metric == "Average sentence length"){
-                                    normalized = normalized / (normalized + 3);
-                                }
-                                else if (metric == "Average word probability"){
-                                    normalized = (normalized + 8.5) / 2.8
-                                }
-                                
-                                avg += normalized;
+                                col.push(chroma.mix("black", selectedMetrics[metric], post.normalized_data[metric]))
                             }
-                            // TODO: do this in python automatically instead
-                            avg = avg / selectedMetrics.length;
-                            normalized = Math.max(Math.min(normalized, 0.99), 0);
-                            var hex = (Math.floor(normalized*255)).toString(16);
-                            return "#333"+hex;
+                            if (col.length == 0){
+                                return "#000";
+                            }
+                            return col[0];
                         });
                 }
                 
@@ -395,7 +412,6 @@
             });
         
             function getSubreddit(subreddit, callback){
-                console.log(subreddit)
                 var request = new XMLHttpRequest();
                 request.open('GET', '/caches/'+subreddit);
                 request.onload = function() {
