@@ -20,6 +20,17 @@
             position: absolute;
             margin-right: 0px;
         }
+
+        .tooltip {
+            font-size: 12px;
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            max-width: 300px;
+            display: none;
+        }
         
         #timeline {
             width: 100%;
@@ -76,6 +87,11 @@
         <ul id="subreddits"></ul>
         <hr>
         <ul id="metrics"></ul>
+    </div>
+
+    <div class="tooltip">
+        apöojfasfökäasjföljasfölkjafsöljafsöljasföljmafs.,mvs soåeipjpäörqjnqwröibbwegälkn<br>
+        kvmva
     </div>
 
     <svg id="scatter">
@@ -172,6 +188,12 @@
                             window.open("https://www.reddit.com/"+post.url, '_blank');
                             d3.event.stopPropagation();
                         })
+                        .on("mouseover", function(post, i){
+                            handleMouseover(post, i);
+                        })
+                        .on("mouseout", function(post, i){
+                            handleMouseout(post, i);
+                        })
                         .attr('r', 0)
                         .transition()
                             .delay(function(post){
@@ -226,6 +248,31 @@
                 }
             });
             
+            function handleMouseover(post, i){ 
+                str = ""
+                for (i in post.tokens){
+                    for (j in post.tokens[i]){
+                        str += " "+post.tokens[i][j];
+                    }
+                }
+                str += "<hr>";
+                for (key in post.analyzed_data){
+                    str += key + ": " + post.analyzed_data[key]+ "<br>"
+                }
+                console.log(post);
+
+                d3.selectAll(".tooltip")
+                    .style("left", (d3.event.x+4)+"px")
+                    .style("top", (d3.event.y+4)+"px")
+                    .style("display", "block")
+                    .html(str);
+                
+            }
+
+            function handleMouseout(post, i){
+                d3.selectAll(".tooltip")
+                    .style("display", "none");
+            };
             
             function updateTime(){
                 timestep = Math.floor(time*maxTimesteps);
@@ -266,6 +313,12 @@
                             console.log("click");
                             window.open("https://www.reddit.com/"+post.url, '_blank');
                             d3.event.stopPropagation();
+                        })
+                        .on("mouseover", function(post, i){
+                            handleMouseover(post, i);
+                        })
+                        .on("mouseout", function(post, i){
+                            handleMouseout(post, i);
                         })
                     
                     updated
