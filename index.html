@@ -113,6 +113,9 @@
         
             var scatterSvg = d3.select("#scatter");
             var scatter = d3.select("#scatter").append("g");
+            scatterSvg
+                .call(d3.zoom().on("zoom", zoomed));
+
             var timeline = d3.select("#timeline");
             var time = 0;
             var timestep = 0;
@@ -126,6 +129,15 @@
             var timespan = 20
             
             var scale = 40;
+            var xoffset = 0;
+            var yoffset = 0;
+
+            function zoomed() {
+                xoffset = d3.event.transform.x;
+                yoffset = d3.event.transform.y;
+                scale = d3.event.transform.k*40;
+                updateScatter();
+            }
             
             const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
                             '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff',
@@ -216,7 +228,6 @@
                         maxTimesteps = 200;
                     }
                     
-                    
                      // Add points
                     scatter.selectAll("circle.sub_"+filename)
                         .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
@@ -252,14 +263,14 @@
                             })
                             .attr('r', 2);
                      
-                    updateTime();
+                    updateScatter();
                     
                     timeline.call(d3.drag()
                         .on("start.interrupt", function() { timeline.interrupt(); })
                         .on("start drag", function() {
                             var bbox = timeline.select(".track").node().getBBox();
                             time = Math.min(Math.max((d3.event.x - bbox.x) / bbox.width, 0), 1 - timespan/(endTime - startTime));
-                            updateTime();
+                            updateScatter();
                         }));
                             
                     
@@ -322,7 +333,7 @@
                     .style("display", "none");
             };
             
-            function updateTime(){
+            function updateScatter(){
                 timestep = Math.floor(time*maxTimesteps);
                 if (timestep == maxTimesteps){
                     timestep -= 1;
@@ -370,10 +381,10 @@
                     
                     updated
                         .attr('cx', function(post){
-                        return post.reduced_data[timestep][0]*scale+width/2;
+                            return post.reduced_data[timestep][0]*scale+width/2+xoffset;
                         })
                         .attr('cy', function(post){
-                            return post.reduced_data[timestep][1]*scale+height/2;
+                            return post.reduced_data[timestep][1]*scale+height/2+yoffset;
                         });
                     
                     
