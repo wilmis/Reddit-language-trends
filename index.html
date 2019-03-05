@@ -43,15 +43,13 @@
             stroke-width:1;
         }
         
+        #timeline > g {
+            opacity: 0;
+        }
+
         #timeline > g > line {
             stroke: #333;
             stroke-width:2;
-        }
-        
-        #timeline > g > rect {
-            fill: #552222aa;
-            width: 5px;
-            height 5px;
         }
         
         #legends {
@@ -90,10 +88,7 @@
         <ul id="metrics"></ul>
     </div>
 
-    <div class="tooltip">
-        apöojfasfökäasjföljasfölkjafsöljafsöljasföljmafs.,mvs soåeipjpäörqjnqwröibbwegälkn<br>
-        kvmva
-    </div>
+    <div class="tooltip"></div>
 
     <svg id="scatter">
         <text id="nowTime" height="100%" x="10" y="20" fill="black"></text>
@@ -101,9 +96,9 @@
     
     <svg id="timeline">
         <line class="track" x1="10%" y1="50%" x2="90%" y2="50%"></line>
-        <g>
-            <line class="handle" x1="50%" y1="30%" x2="50%" y2="70%"></line>
-            <rect></rect>
+        <g class="handle" transform="translate(50, 1)">
+            <rect fill="#d1fcff" opacity="0.6" y="35%" width="50" height="25%"></rect>
+            <line y1="30%" y2="70%"></line>
         </g>
     </svg>
 
@@ -146,7 +141,7 @@
  
             function selectSubreddit(filename, subreddit){
                 console.log(subreddit);
-                $(".sub_"+filename.slice(0, -5)).css("font-weight","700");
+                $(".sub_"+filename.slice(0, -5)).css("font-weight", "700");
                 
                 for (key in selectedSubreddits){
                     deselectSubreddit(key); // Only one sub at the time.
@@ -154,9 +149,13 @@
                 
                 selectedSubreddits[filename] = subreddit;
                 
+                time = 0;
                 startTime = subreddit.time_start;
                 endTime = subreddit.time_stop;
                 timespan = subreddit.timespan;
+                $(".handle").css("opacity","1");  
+                var bbox = timeline.select(".track").node().getBBox();
+                $(".handle>rect").attr("width", bbox.width*timespan/(endTime-startTime));  
                 
                 stage = 1 + 1*filename.includes("_2analyzed_") + 2*filename.includes("_3reduced_");
                 
@@ -279,6 +278,7 @@
             
             function deselectSubreddit(filename){
                 $(".sub_"+filename.slice(0, -5)).css("font-weight","400"); 
+                $(".handle").css("opacity","0"); 
                 delete selectedSubreddits[filename];
                 
                 $("#metrics .sub_"+filename.slice(0, -5)).remove();
@@ -347,8 +347,7 @@
                 var bbox = timeline.select(".track").node().getBBox();
                 var handlePos = bbox.x + bbox.width * time;
                 timeline.select(".handle")
-                    .attr("x1", handlePos)
-                    .attr("x2", handlePos);
+                    .attr("transform", "translate("+handlePos+" 1)");
                     
                 for (filename in selectedSubreddits){
                     subreddit = selectedSubreddits[filename];
