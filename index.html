@@ -149,30 +149,48 @@
                 stage = 1 + 1*filename.includes("_2analyzed_") + 2*filename.includes("_3reduced_");
                 
                 // Normalize all analyzed data
-                metricMins = {};
-                metricMaxes = {};
+                metricAverage = {};
+                metricStandardDeviation = {};
                 if (2 <= stage){
+                    // Find average
                     for (p in subreddit.posts){
                         var post = subreddit.posts[p];
                         for (met in post.analyzed_data){
-                            if (!metricMins.hasOwnProperty(met)){
-                                metricMins[met] = post.analyzed_data[met];
-                                metricMaxes[met] = post.analyzed_data[met];
+                            if (!metricAverage.hasOwnProperty(met)){
+                                metricAverage[met] = [];
+                                metricStandardDeviation[met] = 0;
                             }
                             else {
-                                metricMins[met] = Math.min(post.analyzed_data[met], metricMins[met]);
-                                metricMaxes[met] = Math.max(post.analyzed_data[met], metricMaxes[met]);
+                                metricAverage[met].push(post.analyzed_data[met]);
                             }
                         }
+                    }
+                    
+                    for (met in metricAverage){
+                        avg = 0;
+                        for (i in metricAverage[met]){
+                            avg += metricAverage[met][i];
+                        }
+                        metricAverage[met] = avg / metricAverage[met].length;
+                    }
+                    
+                    for (met in metricAverage){
+                        sd = 0;
+                        for (p in subreddit.posts){
+                            sd += Math.pow(subreddit.posts[p].analyzed_data[met] - metricAverage[met], 2);
+                        }
+                        metricStandardDeviation[met] = Math.sqrt(sd / subreddit.posts.length);
                     }
                     
                     for (p in subreddit.posts){
                         var post = subreddit.posts[p];
                         post.normalized_data = {}
                         for (met in post.analyzed_data){
-                            post.normalized_data[met] = (post.analyzed_data[met] - metricMins[met]) / (metricMaxes[met] - metricMins[met]);
-                            if (metricMaxes[met] - metricMins[met] == 0){
+                            if (metricStandardDeviation[met] == 0){
                                 post.normalized_data[met] = 0;
+                            }
+                            else {
+                                post.normalized_data[met] = (metricAverage[met] - post.analyzed_data[met]) / metricStandardDeviation[met];
                             }
                         }
                     }
@@ -373,7 +391,8 @@
                         .attr("fill", function(post){
                             col = [];
                             for (metric in selectedMetrics){
-                                col.push(chroma.mix("black", selectedMetrics[metric], post.normalized_data[metric]))
+                                var mix = 1 / (1 + Math.exp(post.normalized_data[metric]));
+                                col.push(chroma.mix("black", selectedMetrics[metric], mix))
                             }
                             if (col.length == 0){
                                 return "#000";
