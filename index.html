@@ -15,14 +15,61 @@
             font-family: Consolas, monaco, monospace;
             height: 100vh;
         }
+
+        .time {
+            position: absolute;
+            margin-right: 0px;
+        }
+
+        .tooltip {
+            font-size: 12px;
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            max-width: 300px;
+            display: none;
+        }
         
+        #timeline {
+            width: 100%;
+            height: 5%;
+        }
+        
+        #timeline > .track {
+            stroke: #aaa;
+            stroke-width:1;
+        }
+        
+        #timeline > g > line {
+            stroke: #333;
+            stroke-width:2;
+        }
+        
+        #timeline > g > rect {
+            fill: #552222aa;
+            width: 5px;
+            height 5px;
+        }
+        
+        #legends {
+            position: fixed;
+        }
  
         #subreddits {
             cursor: pointer;
             font-size: 24px;
             list-style-type: none;
             user-select: none;
-            position: fixed;
+        }
+        
+        #metrics {
+            cursor: pointer;
+            color: #777;
+            font-size: 15px;
+            list-style-type: none;
+            user-select: none;
         }
         
         #scatter {
@@ -36,54 +83,316 @@
 </head>
 
 <body>
+    <div id="legends">
+        <ul id="subreddits"></ul>
+        <hr>
+        <ul id="metrics"></ul>
+    </div>
 
-    <ul id="subreddits">
-        
-    </ul>
-    
+    <div class="tooltip">
+        apöojfasfökäasjföljasfölkjafsöljafsöljasföljmafs.,mvs soåeipjpäörqjnqwröibbwegälkn<br>
+        kvmva
+    </div>
+
     <svg id="scatter">
-        
+        <text id="nowTime" height="100%" x="10" y="20" fill="black"></text>
+    </svg>
+    
+    <svg id="timeline">
+        <line class="track" x1="10%" y1="50%" x2="90%" y2="50%"></line>
+        <g>
+            <line class="handle" x1="50%" y1="30%" x2="50%" y2="70%"></line>
+            <rect></rect>
+        </g>
     </svg>
 
     <script type='text/javascript'>
     
         $(function(){
         
-            function viewSubreddit(filename, subreddit){
+            var scatterSvg = d3.select("#scatter");
+            var scatter = d3.select("#scatter").append("g");
+            var timeline = d3.select("#timeline");
+            var time = 0;
+            var timestep = 0;
+            var maxTimesteps = 1;
+            var selectedSubreddits = {};
+            var metrics = [];
+            var selectedMetrics = {};
+
+            var startTime = 0;
+            var endTime = 20;
+            var timespan = 20
+            
+            var scale = 40;
+            
+            const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4',
+                            '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff',
+                            '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1',
+                            '#000075', '#808080', '#ffffff'];
+ 
+            function selectSubreddit(filename, subreddit){
+                console.log(subreddit);
+                $(".sub_"+filename.slice(0, -5)).css("font-weight","700");
+                
+                for (key in selectedSubreddits){
+                    deselectSubreddit(key); // Only one sub at the time.
+                }
+                
+                selectedSubreddits[filename] = subreddit;
+                
+                startTime = subreddit.time_start;
+                endTime = subreddit.time_stop;
+                timespan = subreddit.timespan;
+                
                 stage = 1 + 1*filename.includes("_2analyzed_") + 2*filename.includes("_3reduced_");
                 
-                console.log(subreddit.posts)
+                // Find and append metrics being used.
+                if (subreddit.posts.length != 0){
+                    metrics = Object.keys(subreddit.posts[0]["analyzed_data"]);
+                }
                 
-                time = 2
-                
-                
-                
-                var scatterSvg = d3.select("#scatter");
-                var scatter = d3.select("#scatter").append("g");
+                for (metric in metrics){
+                    $("#metrics").append("<li class='met "+"sub_"+filename.slice(0,-5)+"'>"+metrics[metric]+"</li>");
+                }
                 
                 width = $("#scatter").width();
                 height = $("#scatter").height();
                 
-                var scale = 40;
                 
-                scatter.selectAll("circle")
-                    .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
-                        return time in post.reduced_data;
-                    }))
-                    .enter()
-                    .append('circle')
-                    .attr('cx', function(post){
-                        return post.reduced_data[time][0]*scale+width/2;
-                    })
-                    .attr('cy', function(post){
-                        return post.reduced_data[time][1]*scale+height/2;
-                    })
-                    .attr('r', 2);
+                if (stage == 3){
+                    maxTimesteps = subreddit.reducer_steps;
+                    if (typeof maxTimesteps === 'undefined'){
+                        maxTimesteps = 200;
+                    }
+                    
+                    
+                     // Add points
+                    scatter.selectAll("circle.sub_"+filename)
+                        .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
+                            return timestep in post.reduced_data;
+                        }), function(post){
+                            return post.id;
+                        })
+                        .enter()
+                        .append('circle')
+                        .classed('sub_'+filename.slice(0,-5), true)
+                        .attr('cx', function(post){
+                            return post.reduced_data[timestep][0]*scale+width/2;
+                        })
+                        .attr('cy', function(post){
+                            return post.reduced_data[timestep][1]*scale+height/2;
+                        })
+                        .on("click", function(post){
+                            console.log("click");
+                            window.open("https://www.reddit.com/"+post.url, '_blank');
+                            d3.event.stopPropagation();
+                        })
+                        .on("mouseover", function(post, i){
+                            handleMouseover(post, i);
+                        })
+                        .on("mouseout", function(post, i){
+                            handleMouseout(post, i);
+                        })
+                        .attr('r', 0)
+                        .transition()
+                            .delay(function(post){
+                                var x = post.reduced_data[timestep][0];
+                                var y = post.reduced_data[timestep][1];
+                                return Math.sqrt(x*x+y*y)*10;
+                            })
+                            .attr('r', 2);
+                     
+                    updateTime();
+                    
+                    timeline.call(d3.drag()
+                        .on("start.interrupt", function() { timeline.interrupt(); })
+                        .on("start drag", function() {
+                            var bbox = timeline.select(".track").node().getBBox();
+                            time = Math.min(Math.max((d3.event.x - bbox.x) / bbox.width, 0), 1 - timespan/(endTime - startTime));
+                            updateTime();
+                        }));
+                            
+                    
+                }
             }
             
-            function unviewSubreddit(filename){
-                // TODO
+            function deselectSubreddit(filename){
+                $(".sub_"+filename.slice(0, -5)).css("font-weight","400"); 
+                delete selectedSubreddits[filename];
+                
+                $("#metrics .sub_"+filename.slice(0, -5)).remove();
+                
+                scatter.selectAll(".sub_"+filename.slice(0,-5))
+                    .transition()
+                        .delay(function(post){
+                            var x = post.reduced_data[timestep][0];
+                            var y = post.reduced_data[timestep][1];
+                            return Math.sqrt(x*x+y*y)*10;
+                        })
+                        .attr('r', 0)
+                        .remove();
             }
+            
+            $(document).on("click", ".sub", function(){
+                if ($(this).html() in selectedSubreddits){
+                    filename = $(this).html();
+                    deselectSubreddit(filename);
+                }
+                else {
+                    $(this).css("font-weight","700");
+                    filename = $(this).html();
+                    getSubreddit(filename, function(subreddit){
+                        selectSubreddit(filename, subreddit);
+                    });
+                }
+            });
+            
+            function handleMouseover(post, i){ 
+                str = ""
+                for (i in post.tokens){
+                    for (j in post.tokens[i]){
+                        str += " "+post.tokens[i][j];
+                    }
+                }
+                str += "<hr>";
+                for (key in post.analyzed_data){
+                    str += key + ": " + post.analyzed_data[key]+ "<br>"
+                }
+                console.log(post);
+
+                d3.selectAll(".tooltip")
+                    .style("left", (d3.event.x+4)+"px")
+                    .style("top", (d3.event.y+4)+"px")
+                    .style("display", "block")
+                    .html(str);
+                
+            }
+
+            function handleMouseout(post, i){
+                d3.selectAll(".tooltip")
+                    .style("display", "none");
+            };
+            
+            function updateTime(){
+                timestep = Math.floor(time*maxTimesteps);
+                if (timestep == maxTimesteps){
+                    timestep -= 1;
+                }
+                
+                var d = new Date(0);
+                d.setUTCSeconds(time*(endTime - startTime) + startTime);
+                var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC', timeZoneName: 'short'};
+                scatterSvg.selectAll("#nowTime").html(d.toLocaleDateString('en-US', options));
+
+                var bbox = timeline.select(".track").node().getBBox();
+                var handlePos = bbox.x + bbox.width * time;
+                timeline.select(".handle")
+                    .attr("x1", handlePos)
+                    .attr("x2", handlePos);
+                    
+                for (filename in selectedSubreddits){
+                    subreddit = selectedSubreddits[filename];
+                    filename = filename.slice(0,-5);
+
+                    var updated = scatter.selectAll("circle.sub_"+filename)
+                        .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
+                            return timestep in post.reduced_data;
+                        }), function(post){
+                            return post.id;
+                        });
+                    
+                    updated.exit()
+                        .remove()
+                    
+                    updated.enter()
+                        .append('circle')
+                        .classed('sub_'+filename, true)
+                        .attr('r', 2)
+                        .on("click", function(post){
+                            console.log("click");
+                            window.open("https://www.reddit.com/"+post.url, '_blank');
+                            d3.event.stopPropagation();
+                        })
+                        .on("mouseover", function(post, i){
+                            handleMouseover(post, i);
+                        })
+                        .on("mouseout", function(post, i){
+                            handleMouseout(post, i);
+                        })
+                    
+                    updated
+                        .attr('cx', function(post){
+                        return post.reduced_data[timestep][0]*scale+width/2;
+                        })
+                        .attr('cy', function(post){
+                            return post.reduced_data[timestep][1]*scale+height/2;
+                        });
+                    
+                    
+                }
+                
+                updateColors();
+            }
+            
+            function updateColors(){
+                if (selectedMetrics.length == 0){
+                    scatter.selectAll("circle").fill("fill", "#333");
+                }
+                else {
+                    scatter.selectAll("circle")
+                        .attr("fill", function(post){
+                            var avg = 0;
+                            for (metric in selectedMetrics){
+                                var normalized = post.analyzed_data[metric];
+                                if (metric == "Post length"){
+                                    normalized = normalized / (normalized + 50);
+                                }
+                                else if (metric == "Average sentence length"){
+                                    normalized = normalized / (normalized + 3);
+                                }
+                                else if (metric == "Average word probability"){
+                                    normalized = (normalized + 8.5) / 2.8
+                                }
+                                
+                                avg += normalized;
+                            }
+                            // TODO: do this in python automatically instead
+                            avg = avg / selectedMetrics.length;
+                            normalized = Math.max(Math.min(normalized, 0.99), 0);
+                            var hex = (Math.floor(normalized*255)).toString(16);
+                            return "#333"+hex;
+                        });
+                }
+                
+            }
+            
+            function selectMetric(metric, element){
+                element.css("font-weight", "700");
+                color = colors[metrics.indexOf(metric)];
+                
+                selectedMetrics[metric] = color;
+                element.css("color", color);
+                
+                updateColors();
+            }
+            
+            function deselectMetric(metric, element){
+                element.css("font-weight", "400"); 
+                element.css("color", "");
+                delete selectedMetrics[metric];
+                updateColors();
+            }
+            
+            $(document).on("click", ".met", function(){
+                var metric = $(this).html();
+                if (metric in selectedMetrics){
+                    deselectMetric(metric, $(this));
+                }
+                else {
+                    selectMetric(metric, $(this));
+                }
+            });
         
             function getSubreddit(subreddit, callback){
                 console.log(subreddit)
@@ -99,29 +408,15 @@
             
             request.open('GET', '/caches/')
             request.onload = function() {
-                $($.parseHTML(request.response)).find( "a" ).each(function(index) {
+                $($.parseHTML(request.response)).find("a").each(function(index) {
                     if ($(this).text()[0] != "." && $(this).text().includes(".json")){
-                        $("#subreddits").append("<li class='sub'>"+$(this).text()+"</li>");
+                        $("#subreddits").append("<li class='sub "+"sub_"+$(this).text().slice(0,-5)+"'>"+$(this).text()+"</li>");
                     }
-                })
+                });
 
             }
             request.send();
             
-            $(document).on("click", ".sub", function(){
-                if ($(this).css("font-weight") == "700"){
-                    $(this).css("font-weight","400"); 
-                    filename = $(this).html();
-                    unviewSubreddit(filename)
-                }
-                else {
-                    $(this).css("font-weight","700");
-                    filename = $(this).html();
-                    getSubreddit(filename, function(subreddit){
-                        viewSubreddit(filename, subreddit);
-                    })                    
-                }
-            });
                     
         })
         
