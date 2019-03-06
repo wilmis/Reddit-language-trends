@@ -181,10 +181,7 @@ class Corpus:
         for post in self.posts:
             print("\r{0} %".format(int(i/len(self.posts)*90)), end="\r")
             i += 1
-            ## Tuples: First index is posttitle + self text
-            ##         Second index is comments
-            #polarity_tuples = analyze.polarity_scores(" ".join(post.tokens))
-            #print(polarity_tuples)
+           
             sentiments = {"neg":[], "neu":[], "pos":[], "compound":[]}
             flat_sanitized = [item for sublist in post.sanitized for item in sublist]
             print(flat_sanitized)
@@ -236,9 +233,7 @@ class Corpus:
                 "Upvote ratio" : post.upRatio
             }
 
-            #print("Sentiments:", sentiments)
-            #polarity_comment_thread = analyze.polarity_scores(" ".join(post[1].tokens))
-            #print("Sentiment for post : " + str(polarity_title_text) + '\n' + "Sentiment for comments : " + str(polarity_comment_thread))
+            
 
         total = sum(vocabulary.values(), 0.0)
         for key in vocabulary:
@@ -256,8 +251,8 @@ class Corpus:
             average_probability /= len(flat_sanitized)
 
             post.analyzed_data["Average word probability"] = average_probability
+
         pos_counter = Counter()
-         ##TODO: FÅ detta att fungera
         for word in tagged_sentence:
             if word[1] in tagset_verb:
                 pos_counter['VERB'] += 1
@@ -272,10 +267,7 @@ class Corpus:
                 pos_counter['NOUNS'] += 1
 
             for x in pos_counter.most_common(1):
-                print(x[1])
                 most_common = x[1]
-                print('----------------')
-                print(x[1])
                 post.analyzed_data["Most used word class "] = most_common
 
         ## Skapar dictionary med alla CAPS ord och deras frekvens.
@@ -287,12 +279,12 @@ class Corpus:
                         continue
                     if token.isupper() == True:
                         caps_count[token] +=1
-                    caps_count.pop([caps])
-                    caps = caps_count
+                    caps_values = caps_count.values()
+                    caps = sum(caps_values)
                     post.analyzed_data["Amount of CAPS words"] = caps
-            ##Räknar antalet länkar i post
-            www_count = 0
 
+            ## Räknar antalet länkar i post.
+            www_count = 0
             for post in self.posts:
                 flat_sanitized = [item for sublist in post.sanitized for item in sublist]
                 for token in flat_sanitized:
@@ -309,24 +301,10 @@ class Corpus:
 
 
 
-        print(tagged_sentence)
-        print(pos_counter.most_common(1))
-        print(pos_counter.most_common(1)[0][1])
-
         print("done")
         ##python language_analyser.py AskReddit --starttime 2014-05-02T05:33+0000 --endtime 2015-05-02T05:33+0000 -n 1000 -rw
 
 
-
-
-        # Räknar antalet länkar som World Wide Web länkar som uppstår i texten som analyseras.
-
-
-
-        #print({"Sentence :":vs, })
-
-        """self.posts[0].analyzed_data = {"sentiment": [0.5, 0.1, 0.3], "length": 30, "complexity": 0.92}
-        self.posts[1].analyzed_data = {"sentiment": [0.8, 0.2, 0.8], "length": 10, "complexity": 0.12}"""
 
     def reduce_data_dimensions(self, timespan, steps, epochs, perplexity):
         """
