@@ -319,6 +319,11 @@
                         str += " "+post.tokens[i][j];
                     }
                 }
+
+                var postDate = new Date(0);
+                postDate.setUTCSeconds(time*(endTime - startTime) + startTime);
+                str += "<br><br>"
+                    +postDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC', timeZoneName: 'short'});
                 str += "<hr>";
                 for (key in post.analyzed_data){
                     str += key + ": " + post.analyzed_data[key]+ "<br>"
@@ -370,7 +375,7 @@
                     updated.enter()
                         .append('circle')
                         .classed('sub_'+filename, true)
-                        .attr('r', 2)
+                        .attr('r', 1)
                         .on("click", function(post){
                             window.open("https://www.reddit.com/"+post.url, '_blank');
                             d3.event.stopPropagation();
@@ -381,6 +386,9 @@
                         .on("mouseout", function(post, i){
                             handleMouseout(post, i);
                         })
+                        .transition()
+                            .delay(350)
+                            .attr("r", 2);
                     
                     updated
                         .attr('cx', function(post){
