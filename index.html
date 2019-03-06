@@ -14,7 +14,7 @@
     <style>
         body {
             font-family: Consolas, monaco, monospace;
-            height: 100vh;
+            height: 98vh;
         }
 
         .time {
@@ -104,7 +104,7 @@
     <div class="tooltip"></div>
 
     <svg id="scatter">
-        <text id="nowTime" height="100%" x="10" y="20" fill="black"></text>
+        <text id="nowTime" height="100%" x="10" y="97.5%" fill="black"></text>
     </svg>
     
     <svg id="connectedScatter">
@@ -294,9 +294,13 @@
             }
             
             function deselectSubreddit(filename){
-                $(".sub_"+filename.slice(0, -5)).css("font-weight","400"); 
+                $(".sub_"+filename.slice(0, -5)).css("font-weight", "400"); 
                 $(".handle").css("opacity", "0"); 
                 delete selectedSubreddits[filename];
+                
+                while (Object.keys(selectedMetrics).length != 0){
+                    deselectMetric(Object.keys(selectedMetrics)[0]);
+                }
                 
                 $("#metrics .sub_"+filename.slice(0, -5)).remove();
                 
@@ -497,8 +501,10 @@
             }
             
             function deselectMetric(metric, element){
-                element.css("font-weight", "400"); 
-                element.css("color", "");
+                if (element){
+                    element.css("font-weight", "400"); 
+                    element.css("color", "");                
+                }
                 delete selectedMetrics[metric];
                 updateColors();
                 deleteConnectedScatter(metric);
