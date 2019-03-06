@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#import reddit_crawler
+
 
 import pushsift_reddit_crawler as prc
 import dimensionality_reducer as dr
@@ -12,9 +15,8 @@ import datetime as dt
 from collections import Counter
 import math
 import numpy as np
-
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
+import nltk
 class Post:
     """ Representing data held in posts"""
     def __init__(self, tokens=None, time=None, user=None, is_comment=None, parentPost=None, url=None):
@@ -142,6 +144,18 @@ class Corpus:
 
         print(len(self.posts))
 
+        for t in range(time_start, time_stop, int((time_stop-time_start)/submissions)):
+            print("\r{0} %".format(int((t-time_start)/(time_stop-time_start)*100)), end="\r")
+            q = prc.query(reddit, pushshift_api, t, self.subreddit, 1)
+            for p in q:
+                if len([1 for x in self.posts if x.time == p[0].time]) == 0: # FIXME: this is slow and ugly
+                    self.posts.append(p[0])
+                else:
+                    print("Got the same post twice")
+        print("done")
+
+        print(len(self.posts))
+
     def sort_posts(self):
         self.posts.sort(key=lambda x:x.time)
 
@@ -153,7 +167,13 @@ class Corpus:
 
         vocabulary = Counter()
         analyze = SentimentIntensityAnalyzer()
+        nltk.download('average_perceptron_tagger')
+        i = 0
 
+        tagset_verb = ['VB','VBZ','VBD','VBN', 'VBG', 'VBP']
+        tagset_adverb = ['RB','RBR','RBS']
+        tagset_nouns = ['NN','NNP','NNS']
+        tagset_adjectives = ['JJ','JJS','JJR']
         i = 0
         for post in self.posts:
             print("\r{0} %".format(int(i/len(self.posts)*90)), end="\r")
@@ -177,13 +197,18 @@ class Corpus:
                 average_token_length /= len(flat_sanitized)
 
             average_sentence_length = 0
+
+           
             for sentence in post.sanitized:
                 average_sentence_length += len(sentence)
 
                 polarity_text = analyze.polarity_scores(" ".join(sentence))
+                tagged_sentence = nltk.pos_tag(sentence)
                 for key, value in polarity_text.items():
                     sentiments[key].append(value)
-
+            
+           
+                    
             average_token_length = 0
             if flat_sanitized != []:
                 average_sentence_length /= len(post.sanitized)
@@ -194,12 +219,13 @@ class Corpus:
                 else:
                     sentiments[key] = sum(sentiments[key]) / len(sentiments[key])
             
+    
 
             post.analyzed_data = {
                 "Post length" : len(flat_sanitized),
                 "Average sentence length" : average_sentence_length,
                 "Average token length" : average_token_length,
-
+    
                 "Sentiment negative" : sentiments["neg"], # Will these cause problems with t-sne because they are too similar?
                 "Sentiment neutral" : sentiments["neu"],
                 "Sentiment positive" : sentiments["pos"]
@@ -225,27 +251,73 @@ class Corpus:
             average_probability /= len(flat_sanitized)
 
             post.analyzed_data["Average word probability"] = average_probability
+        pos_counter = Counter()
+         ##TODO: FÅ detta att fungera   
+        for word in tagged_sentence:
+            if word[1] in tagset_verb:
+                pos_counter['VERB'] += 1
+                continue
+            elif word[1] in tagset_adverb:
+                pos_counter['ADVERB'] += 1
+                continue
+            elif word[1] in tagset_adjectives:
+                pos_counter['ADJECTIVE'] += 1
+                continue
+            elif word[1] in tagset_nouns:
+                pos_counter['NOUNS'] += 1
+
+            for x in pos_counter.most_common(1):
+                print(x[1])
+                most_common = x[1]
+                print('----------------')
+                print(x[1])
+                post.analyzed_data["Most used word class "] = most_common  
+
+        ## Skapar dictionary med alla CAPS ord och deras frekvens.
+        ## TODO: SEMANTIC ANALYSIS.
+            caps_count = Counter()
+            for post in self.posts:
+                flat_sanitized = [item for sublist in post.sanitized for item in sublist]
+                for token in flat_sanitized:
+                    if token.isupper() == True:
+                        caps_count[token] +=1
+                    caps_count.pop([caps]) 
+                    caps = caps_count
+                    post.analyzed_data["Amount of CAPS words"] = caps
+            www_count = 0
+            
+            for post in self.posts: 
+                flat_sanitized = [item for sublist in post.sanitized for item in sublist]
+                for token in flat_sanitized:
+                    if token == 'www':
+                        www_count += 1
+                    links = www_count
+                    post.analyzed_data["Amount of World Wide Web links"] = links
 
             print("\n")
             print(" ".join(flat_sanitized))
             for key, value in post.analyzed_data.items():
                 print(key, ":", value)
 
-        print("done")
-                
-
+       
             
+            
+        print(tagged_sentence)
+        print(pos_counter.most_common(1))
+        print(pos_counter.most_common(1)[0][1])
         
-        ## TODO: Fixa meningslängd. Remove stopwords from count
-        #for tuples in self.posts:
-        #    len_count = 0
-        #    for text in tuples:
-        #            len_count += 1
-        #            sentence_length = len_count
+        print("done")
+        ##python language_analyser.py AskReddit --starttime 2014-05-02T05:33+0000 --endtime 2015-05-02T05:33+0000 -n 1000 -rw
+
+        
+
+
+        # Räknar antalet länkar som World Wide Web länkar som uppstår i texten som analyseras.
+        
                    
             
         #print({"Sentence :":vs, })
-        ## TODO: Medelvärde av alla meningar för total sentiment av posten
+
         """self.posts[0].analyzed_data = {"sentiment": [0.5, 0.1, 0.3], "length": 30, "complexity": 0.92}
         self.posts[1].analyzed_data = {"sentiment": [0.8, 0.2, 0.8], "length": 10, "complexity": 0.12}"""
 
