@@ -18,6 +18,7 @@ import numpy as np
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import nltk
 nltk.download('average_perceptron_tagger')
+
 class Post:
     """ Representing data held in posts"""
     def __init__(self, tokens=None, time=None, user=None, is_comment=None, parentPost=None, url=None):
