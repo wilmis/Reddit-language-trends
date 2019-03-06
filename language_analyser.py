@@ -186,7 +186,7 @@ class Corpus:
             #print(polarity_tuples)
             sentiments = {"neg":[], "neu":[], "pos":[], "compound":[]}
             flat_sanitized = [item for sublist in post.sanitized for item in sublist]
-            print(flat_sanitized)
+            print(str(flat_sanitized).encode('utf-8'))
             print(post.url)
 
             average_token_length = 0
