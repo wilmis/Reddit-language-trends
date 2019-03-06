@@ -276,7 +276,6 @@ class Corpus:
                 post.analyzed_data["Most used word class "] = most_common  
 
         ## Skapar dictionary med alla CAPS ord och deras frekvens.
-        ## TODO: SEMANTIC ANALYSIS.
             caps_count = Counter()
             for post in self.posts:
                 flat_sanitized = [item for sublist in post.sanitized for item in sublist]
@@ -288,7 +287,7 @@ class Corpus:
                     caps_values = caps_count.values()
                     caps = (sum(caps_values))
                     post.analyzed_data["Amount of CAPS words"] = caps
-
+            ##Räknar antalet länkar i post
             www_count = 0
             for post in self.posts: 
                 flat_sanitized = [item for sublist in post.sanitized for item in sublist]
