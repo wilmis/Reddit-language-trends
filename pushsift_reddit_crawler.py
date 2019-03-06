@@ -100,7 +100,7 @@ def in_subreddit(reddit, submissions):
     for submission_id in submissions:
         submission = reddit.submission(id=submission_id)
 
-        sub = {"title" :[], "selftext":[], "time":[],  "comments":[], "url":[]}
+        sub = {"title" :[], "selftext":[], "time":[],  "comments":[], "url":[], "upRatio":[]}
 
         for word in tokens(submission.title):
             sub["title"].append(word)
@@ -118,8 +118,11 @@ def in_subreddit(reddit, submissions):
 
         sub["time"]= submission.created_utc # tid när subbmission skapades
         sub["url"] = submission.permalink   # Output: the URL to the submission
+        sub["upRatio"] = submission.upvote_ratio
         #pprint.pprint(vars(submission))
-        title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"])
+        title_selftext = la.Post(tokens=sub["title"] + sub["selftext"], time=sub["time"], user="Unavailible", is_comment=False, parentPost=None, url=sub["url"], upRatio=sub["upRatio"])
+        print(title_selftext.tokens)
+        print(title_selftext.upRatio)
         #print(sub["title"])
         postList = []
 
