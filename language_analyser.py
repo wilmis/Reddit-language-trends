@@ -17,6 +17,7 @@ import math
 import numpy as np
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import nltk
+nltk.download('average_perceptron_tagger')
 class Post:
     """ Representing data held in posts"""
     def __init__(self, tokens=None, time=None, user=None, is_comment=None, parentPost=None, url=None):
@@ -167,7 +168,7 @@ class Corpus:
 
         vocabulary = Counter()
         analyze = SentimentIntensityAnalyzer()
-        nltk.download('average_perceptron_tagger')
+        
         i = 0
 
         tagset_verb = ['VB','VBZ','VBD','VBN', 'VBG', 'VBP']
@@ -279,13 +280,15 @@ class Corpus:
             for post in self.posts:
                 flat_sanitized = [item for sublist in post.sanitized for item in sublist]
                 for token in flat_sanitized:
+                    if token == 'I':
+                        continue
                     if token.isupper() == True:
                         caps_count[token] +=1
-                    caps_count.pop([caps]) 
-                    caps = caps_count
+                    caps_values = caps_count.values()
+                    caps = (sum(caps_values))
                     post.analyzed_data["Amount of CAPS words"] = caps
+
             www_count = 0
-            
             for post in self.posts: 
                 flat_sanitized = [item for sublist in post.sanitized for item in sublist]
                 for token in flat_sanitized:
@@ -302,9 +305,7 @@ class Corpus:
        
             
             
-        print(tagged_sentence)
-        print(pos_counter.most_common(1))
-        print(pos_counter.most_common(1)[0][1])
+      
         
         print("done")
         ##python language_analyser.py AskReddit --starttime 2014-05-02T05:33+0000 --endtime 2015-05-02T05:33+0000 -n 1000 -rw
