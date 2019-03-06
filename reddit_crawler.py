@@ -4,6 +4,7 @@ import pprint
 import praw
 from praw.models import MoreComments
 import time
+import json
 import re
 
 
@@ -16,6 +17,15 @@ def tokens(source):
 def make_reddit_instance():
     # TODO Skapa reddit användare. Registrera botten och gör så alla id inte är hårdkodade.
     "Create an authorized reddit instance. "
+    with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "LOGIN.json")) as f:
+        data = json.load(f)
+
+    reddit = praw.Reddit(client_id=data["client_id"],
+                         client_secret=data["client_secret"],
+                         user_agent=data["user_agent"],
+                         username=data["username"],
+                         password=data["password"])
+    
     reddit = praw.Reddit(client_id='Xt0iuspmVUn8GQ',
                          client_secret=,
                          user_agent='languageBot1',
