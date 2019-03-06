@@ -21,7 +21,7 @@ nltk.download('average_perceptron_tagger')
 
 class Post:
     """ Representing data held in posts"""
-    def __init__(self, tokens=None, time=None, user=None, is_comment=None, parentPost=None, url=None):
+    def __init__(self, tokens=None, time=None, user=None, is_comment=None, parentPost=None, url=None, upRatio=None):
         """Initiate with data about the post obtained from crawler"""
         self.id = uuid.uuid4().hex
         self.tokens = tokens
@@ -30,7 +30,8 @@ class Post:
         self.is_comment = is_comment
         self.parentPost = parentPost
         self.url = url
-        
+        self.upRatio = upRatio
+
         self.sanitized_tokens = None
 
 
@@ -39,7 +40,7 @@ class Post:
 
         # Analyzed data with reduced dimensionality
         self.reduced_data = ()
-    
+
     @property
     def sanitized(self):
         bad_tokens = ["*", "~", "^","`", ">"]
@@ -90,7 +91,7 @@ class Post:
                     if next_index == 1 and sanitized_sentence[i] == "]":
                         next_index = 2
                         content_end = i
-                    
+
                     if next_index == 2 and sanitized_sentence[i] == "(":
                         next_index = 3
                     else:
@@ -105,7 +106,7 @@ class Post:
 
                     i += 1
                 """
-                
+
                 if sanitized_sentence != []:
                     self.sanitized_tokens.append(sanitized_sentence)
 
@@ -116,10 +117,10 @@ class Corpus:
     def __init__(self, subreddit=None):
         self.subreddit = subreddit
         self.posts = []
-        
+
         self.time_start = None
         self.time_stop = None
-        
+
         self.timespan = None
         self.reducer_steps = None
         self.reducer_epocs = None
@@ -129,7 +130,7 @@ class Corpus:
         Collects and generates a tokenized corpus for the given subreddit
         using the reddit_crawler
         """
-        
+
         self.time_start = time_start
         self.time_stop = time_stop
 
@@ -169,7 +170,7 @@ class Corpus:
 
         vocabulary = Counter()
         analyze = SentimentIntensityAnalyzer()
-        
+
         i = 0
 
         tagset_verb = ['VB','VBZ','VBD','VBN', 'VBG', 'VBP']
@@ -193,14 +194,14 @@ class Corpus:
             for token in flat_sanitized:
                 vocabulary[token] += 1
                 average_token_length += len(token)
-            
+
             average_token_length = 0
             if flat_sanitized != []:
                 average_token_length /= len(flat_sanitized)
 
             average_sentence_length = 0
 
-           
+
             for sentence in post.sanitized:
                 average_sentence_length += len(sentence)
 
@@ -208,9 +209,9 @@ class Corpus:
                 tagged_sentence = nltk.pos_tag(sentence)
                 for key, value in polarity_text.items():
                     sentiments[key].append(value)
-            
-           
-                    
+
+
+
             average_token_length = 0
             if flat_sanitized != []:
                 average_sentence_length /= len(post.sanitized)
@@ -220,26 +221,28 @@ class Corpus:
                     sentiments[key] = 0
                 else:
                     sentiments[key] = sum(sentiments[key]) / len(sentiments[key])
-            
-    
+
+
 
             post.analyzed_data = {
                 "Post length" : len(flat_sanitized),
                 "Average sentence length" : average_sentence_length,
                 "Average token length" : average_token_length,
-    
+
                 "Sentiment negative" : sentiments["neg"], # Will these cause problems with t-sne because they are too similar?
                 "Sentiment neutral" : sentiments["neu"],
-                "Sentiment positive" : sentiments["pos"]
+                "Sentiment positive" : sentiments["pos"],
+
+                "Upvote ratio" : post.upRatio
             }
-                
+
             #print("Sentiments:", sentiments)
             #polarity_comment_thread = analyze.polarity_scores(" ".join(post[1].tokens))
             #print("Sentiment for post : " + str(polarity_title_text) + '\n' + "Sentiment for comments : " + str(polarity_comment_thread))
 
         total = sum(vocabulary.values(), 0.0)
         for key in vocabulary:
-            vocabulary[key] = math.log(vocabulary[key]/total) 
+            vocabulary[key] = math.log(vocabulary[key]/total)
 
         i = 0
         for post in self.posts:
@@ -254,7 +257,7 @@ class Corpus:
 
             post.analyzed_data["Average word probability"] = average_probability
         pos_counter = Counter()
-         ##TODO: FÅ detta att fungera   
+         ##TODO: FÅ detta att fungera
         for word in tagged_sentence:
             if word[1] in tagset_verb:
                 pos_counter['VERB'] += 1
@@ -273,7 +276,7 @@ class Corpus:
                 most_common = x[1]
                 print('----------------')
                 print(x[1])
-                post.analyzed_data["Most used word class "] = most_common  
+                post.analyzed_data["Most used word class "] = most_common
 
         ## Skapar dictionary med alla CAPS ord och deras frekvens.
             caps_count = Counter()
@@ -284,12 +287,13 @@ class Corpus:
                         continue
                     if token.isupper() == True:
                         caps_count[token] +=1
-                    caps_values = caps_count.values()
-                    caps = (sum(caps_values))
+                    caps_count.pop([caps])
+                    caps = caps_count
                     post.analyzed_data["Amount of CAPS words"] = caps
             ##Räknar antalet länkar i post
             www_count = 0
-            for post in self.posts: 
+
+            for post in self.posts:
                 flat_sanitized = [item for sublist in post.sanitized for item in sublist]
                 for token in flat_sanitized:
                     if token == 'www':
@@ -302,21 +306,23 @@ class Corpus:
             for key, value in post.analyzed_data.items():
                 print(key, ":", value)
 
-       
-            
-            
-      
-        
+
+
+
+        print(tagged_sentence)
+        print(pos_counter.most_common(1))
+        print(pos_counter.most_common(1)[0][1])
+
         print("done")
         ##python language_analyser.py AskReddit --starttime 2014-05-02T05:33+0000 --endtime 2015-05-02T05:33+0000 -n 1000 -rw
 
-        
+
 
 
         # Räknar antalet länkar som World Wide Web länkar som uppstår i texten som analyseras.
-        
-                   
-            
+
+
+
         #print({"Sentence :":vs, })
 
         """self.posts[0].analyzed_data = {"sentiment": [0.5, 0.1, 0.3], "length": 30, "complexity": 0.92}
@@ -328,33 +334,33 @@ class Corpus:
         2D points for every post.
         Returns a list of these 2D points.
         """
-        
+
         self.timespan = dt.timedelta(days=timespan).total_seconds()
         self.reducer_steps = steps
         self.reducer_epocs = epochs
-        
+
         self.sort_posts()
-        
+
         try:
             dr.Dynamic_tSNE_reduce_dimensions(self, dt.timedelta(days=timespan).total_seconds(), steps, epochs, perplexity)
         except AssertionError:
             print("Can't reduce data. Is theano installed?")
 
-            
+
 def corpus_from_file(path):
     print("Using existsing corpus file: "+path)
     corpus_file = open(path, mode='r')
     jcorpus = json.load(corpus_file)
     corpus_file.close()
-    
+
     posts = []
     for jpost in jcorpus["posts"]:
         post = Post()
         post.__dict__.update(**jpost)
         posts.append(post)
-    
+
     del jcorpus["posts"]
-    
+
     corpus = Corpus()
     corpus.__dict__.update(**jcorpus)
     corpus.posts = posts
@@ -367,7 +373,7 @@ def corpus_to_file(corpus, path):
         if isinstance(obj, np.float32):
             return float(obj)
         return obj.__dict__
-    
+
     print("Saving built corpus to: "+path)
     corpus_file = open(path, mode='w')
     json.dump(corpus, corpus_file, default=decoder)
@@ -387,44 +393,44 @@ def main():
     parser.add_argument('subreddit', metavar='s', type=str, nargs='*', help='which subreddits to analyze')
     parser.add_argument('-p', '--port', default=8000, type=int, help='what port to open the http visualization server on')
     parser.add_argument('-n', '--number', default=200, type=int, help='how many posts to get from every subreddit')
-    
+
     parser.add_argument('-r', '--readcache', action='store_true', help='use cached files if they exist')
     parser.add_argument('-w', '--writecache', action='store_true', help='write generated data to cache files')
     parser.add_argument('-c', '--cleancache', action='store_true', help='remove previous stage caches')
-   
-    
+
+
     def valid_date(s):
         try:
             return dt.datetime.strptime(s, "%Y-%m-%dT%H:%M%z")
         except ValueError:
             msg = "Not a valid date: '{0}'.".format(s)
             raise argparse.ArgumentTypeError(msg)
-    
+
     parser.add_argument("-s", "--starttime", type=valid_date, required=True, help="datetime when to start collection - format YYYY-MM-DDThh:mmTZD\nex:2015-03-04T05:32+0100")
     parser.add_argument("-e", "--endtime", type=valid_date, required=True, help="datetime when to end collection - format YYYY-MM-DDThh:mmTZD\nex:2015-03-04T05:32+0100")
-    
+
     parser.add_argument('-tt', '--tsne_timespan', default=250, type=float, help='How many days the timespan covers')
     parser.add_argument('-ts', '--tsne_steps', default=200, type=int, help='How many steps the data is divided into')
     parser.add_argument('-te', '--tsne_epochs', default=2000, type=int, help='How many epochs are spent to reduce the data')
     parser.add_argument('-tp', '--tsne_perplexity', default=40, type=int, help='t-sne perplexity - reduce or increase if numbers become invalid')
-                        
+
     args = parser.parse_args()
-    
+
     subreddits = args.subreddit
     # If no subreddits, use /r/worldnews as default
     if len(subreddits) == 0:
         subreddits.append("worldnews")
-    
+
     server_port = args.port
     posts = args.number
-    
+
     starttime = args.starttime
     endtime = args.endtime
-    
+
     read_from_cache = args.readcache
     save_to_cache = args.writecache
     remove_previous_stage_caches = args.cleancache
-    
+
     reddit, pushshift_api = prc.make_reddit_instance()
 
     corpuses = {}
@@ -479,7 +485,7 @@ def main():
         corpuses[subreddit] = corpus
 
     start_server(server_port)
-    
+
 
 if __name__ == "__main__":
     main()
