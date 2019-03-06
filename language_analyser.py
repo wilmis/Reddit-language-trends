@@ -45,6 +45,7 @@ class Post:
     def sanitized(self):
         bad_tokens = ["*", "~", "^","`", ">"]
         bad_combinations =  [["[", "deleted", "]"],
+                             ["[", "removed", "]"],
                              ["[", "raderat", "]"],
                              ["[", "borttagen", "]"],
                              [">","!"], ["!","<"]]
@@ -184,21 +185,24 @@ class Corpus:
            
             sentiments = {"neg":[], "neu":[], "pos":[], "compound":[]}
             flat_sanitized = [item for sublist in post.sanitized for item in sublist]
-            print(str(flat_sanitized).encode('utf-8'))
-            print(post.url)
 
             average_token_length = 0
+            caps_count = 0
+            character_count = 0
             for token in flat_sanitized:
                 vocabulary[token] += 1
                 average_token_length += len(token)
+                for character in token:
+                    character_count += 1
+                    if character.isupper():
+                        caps_count +=1
 
-            average_token_length = 0
             if flat_sanitized != []:
                 average_token_length /= len(flat_sanitized)
 
             average_sentence_length = 0
 
-
+            pos_counter = Counter()
             for sentence in post.sanitized:
                 average_sentence_length += len(sentence)
 
@@ -207,9 +211,23 @@ class Corpus:
                 for key, value in polarity_text.items():
                     sentiments[key].append(value)
 
+                for word in tagged_sentence:
+                    if word[1] in tagset_verb:
+                        pos_counter['VERB'] += 1
+                        continue
+                    elif word[1] in tagset_adverb:
+                        pos_counter['ADVERB'] += 1
+                        continue
+                    elif word[1] in tagset_adjectives:
+                        pos_counter['ADJECTIVE'] += 1
+                        continue
+                    elif word[1] in tagset_nouns:
+                        pos_counter['NOUNS'] += 1
+                totalWord = sum(Counter(pos_counter).values())
 
+            post.analyzed_data["Verb ratio"] = pos_counter["VERB"] / totalWord
+            post.analyzed_data["Noun ratio"] = pos_counter["NOUNS"] / totalWord
 
-            average_token_length = 0
             if flat_sanitized != []:
                 average_sentence_length /= len(post.sanitized)
 
@@ -219,9 +237,15 @@ class Corpus:
                 else:
                     sentiments[key] = sum(sentiments[key]) / len(sentiments[key])
 
+            www_count = 0
+            flat_sanitized = [item for sublist in post.sanitized for item in sublist]
+            for token in flat_sanitized:
+                if token == 'www':
+                    www_count += 1
+                links = www_count
+                post.analyzed_data["Ratio of World Wide Web links"] = links / len(flat_sanitized);
 
-
-            post.analyzed_data = {
+            post.analyzed_data.update({
                 "Post length" : len(flat_sanitized),
                 "Average sentence length" : average_sentence_length,
                 "Average token length" : average_token_length,
@@ -230,10 +254,12 @@ class Corpus:
                 "Sentiment neutral" : sentiments["neu"],
                 "Sentiment positive" : sentiments["pos"],
 
-                "Upvote ratio" : post.upRatio
-            }
+                "Upvote ratio" : post.upRatio,
+                "CAPS ratio" : caps_count / character_count
+            })
 
-            
+            if post.upRatio is None: # Some old corpora did not have this
+                post.analyzed_data["Upvote ratio"] = 0
 
         total = sum(vocabulary.values(), 0.0)
         for key in vocabulary:
@@ -252,54 +278,11 @@ class Corpus:
 
             post.analyzed_data["Average word probability"] = average_probability
 
-        pos_counter = Counter()
-        for word in tagged_sentence:
-            if word[1] in tagset_verb:
-                pos_counter['VERB'] += 1
-                continue
-            elif word[1] in tagset_adverb:
-                pos_counter['ADVERB'] += 1
-                continue
-            elif word[1] in tagset_adjectives:
-                pos_counter['ADJECTIVE'] += 1
-                continue
-            elif word[1] in tagset_nouns:
-                pos_counter['NOUNS'] += 1
-
-            for x in pos_counter.most_common(1):
-                most_common = x[1]
-                post.analyzed_data["Most used word class "] = most_common
-
-        ## Skapar dictionary med alla CAPS ord och deras frekvens.
-            caps_count = Counter()
-            for post in self.posts:
-                flat_sanitized = [item for sublist in post.sanitized for item in sublist]
-                for token in flat_sanitized:
-                    if token == 'I':
-                        continue
-                    if token.isupper() == True:
-                        caps_count[token] +=1
-                    caps_values = caps_count.values()
-                    caps = sum(caps_values)
-                    post.analyzed_data["Amount of CAPS words"] = caps
-
-            ## Räknar antalet länkar i post.
-            www_count = 0
-            for post in self.posts:
-                flat_sanitized = [item for sublist in post.sanitized for item in sublist]
-                for token in flat_sanitized:
-                    if token == 'www':
-                        www_count += 1
-                    links = www_count
-                    post.analyzed_data["Amount of World Wide Web links"] = links
 
             print("\n")
-            print(" ".join(flat_sanitized))
+            print(" ".join(flat_sanitized).encode('utf-8'))
             for key, value in post.analyzed_data.items():
                 print(key, ":", value)
-
-
-
 
         print("done")
         ##python language_analyser.py AskReddit --starttime 2014-05-02T05:33+0000 --endtime 2015-05-02T05:33+0000 -n 1000 -rw
