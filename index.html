@@ -321,7 +321,7 @@
                 }
 
                 var postDate = new Date(0);
-                postDate.setUTCSeconds(time*(endTime - startTime) + startTime);
+                postDate.setUTCSeconds(post.time);
                 str += "<br><br>"
                     +postDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC', timeZoneName: 'short'});
                 str += "<hr>";

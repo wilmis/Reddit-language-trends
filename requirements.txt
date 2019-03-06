@@ -2,3 +2,4 @@ cython
 praw
 psaw
 vaderSentiment
+nltk
