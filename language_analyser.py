@@ -18,6 +18,7 @@ import numpy as np
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import nltk
 nltk.download('average_perceptron_tagger')
+
 class Post:
     """ Representing data held in posts"""
     def __init__(self, tokens=None, time=None, user=None, is_comment=None, parentPost=None, url=None, upRatio=None):
@@ -278,7 +279,6 @@ class Corpus:
                 post.analyzed_data["Most used word class "] = most_common
 
         ## Skapar dictionary med alla CAPS ord och deras frekvens.
-        ## TODO: SEMANTIC ANALYSIS.
             caps_count = Counter()
             for post in self.posts:
                 flat_sanitized = [item for sublist in post.sanitized for item in sublist]
@@ -290,7 +290,7 @@ class Corpus:
                     caps_count.pop([caps])
                     caps = caps_count
                     post.analyzed_data["Amount of CAPS words"] = caps
-
+            ##Räknar antalet länkar i post
             www_count = 0
 
             for post in self.posts:
