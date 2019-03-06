@@ -223,8 +223,9 @@ class Corpus:
                         continue
                     elif word[1] in tagset_nouns:
                         pos_counter['NOUNS'] += 1
-                totalWord = sum(Counter(pos_counter).values())
-
+            totalWord = sum(Counter(pos_counter).values())
+            if totalWord == 0:
+               totalWord = 1 
             post.analyzed_data["Verb ratio"] = pos_counter["VERB"] / totalWord
             post.analyzed_data["Noun ratio"] = pos_counter["NOUNS"] / totalWord
 
