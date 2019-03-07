@@ -14,7 +14,7 @@
     <style>
         body {
             font-family: Consolas, monaco, monospace;
-            height: 100vh;
+            height: 98vh;
         }
 
         .time {
@@ -81,6 +81,15 @@
             height: 90%; 
             box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);            
         }
+        
+        #connectedScatter {
+            position: absolute;
+            margin-top: -200px;
+            margin-left: 10%;
+            width: 80%;
+            height: 190px;
+        }
+        
     </style>
     
 </head>
@@ -95,13 +104,16 @@
     <div class="tooltip"></div>
 
     <svg id="scatter">
-        <text id="nowTime" height="100%" x="10" y="20" fill="black"></text>
+        <text id="nowTime" height="100%" x="10" y="97.5%" fill="black"></text>
+    </svg>
+    
+    <svg id="connectedScatter">
     </svg>
     
     <svg id="timeline">
         <line class="track" x1="10%" y1="50%" x2="90%" y2="50%"></line>
         <g class="handle" transform="translate(50, 1)">
-            <rect fill="#d1fcff" opacity="0.6" y="35%" width="50" height="25%"></rect>
+            <rect fill="#9fc9cc" opacity="0.6" y="35%" width="50" height="25%"></rect>
             <line y1="30%" y2="70%"></line>
         </g>
     </svg>
@@ -111,11 +123,15 @@
         $(function(){
         
             var scatterSvg = d3.select("#scatter");
-            var scatter = d3.select("#scatter").append("g");
-            scatterSvg
-                .call(d3.zoom().on("zoom", zoomed));
-
+            var scatter = scatterSvg.append("g");
+            scatterSvg.call(d3.zoom().on("zoom", zoomed));
             var timeline = d3.select("#timeline");
+            var timeBBox = timeline.node().getBBox();
+            var connectedScatter = d3.select("#connectedScatter")
+                .attr("viewBox", "0 0 1 1")
+                .attr("preserveAspectRatio", "none");            
+
+            var stage = 0;
             var time = 0;
             var timestep = 0;
             var maxTimesteps = 1;
@@ -138,10 +154,7 @@
                 updateScatter();
             }
             
-            const colors = ['#dd5b7b', '#f58231', '#ffe119', '#4363d8', '#ba3fdf', '#3cb44b',
-                            '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff',
-                            '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffb265',
-                            '#000075', '#808080', '#ffffff'];
+            const colors = (d3.schemeSet1+","+d3.schemeSet2).split(",");
  
             function selectSubreddit(filename, subreddit){
                 console.log(subreddit);
@@ -233,7 +246,7 @@
                     
                      // Add points
                     scatter.selectAll("circle.sub_"+filename)
-                        .data(subreddit.posts.filter(function(post){ // TODO: do this with offset to support a lot of data
+                        .data(subreddit.posts.filter(function(post){ // This could be more efficiently implemented using offset
                             return timestep in post.reduced_data;
                         }), function(post){
                             return post.id;
@@ -286,9 +299,13 @@
             }
             
             function deselectSubreddit(filename){
-                $(".sub_"+filename.slice(0, -5)).css("font-weight","400"); 
-                $(".handle").css("opacity","0"); 
+                $(".sub_"+filename.slice(0, -5)).css("font-weight", "400"); 
+                $(".handle").css("opacity", "0"); 
                 delete selectedSubreddits[filename];
+                
+                while (Object.keys(selectedMetrics).length != 0){
+                    deselectMetric(Object.keys(selectedMetrics)[0]);
+                }
                 
                 $("#metrics .sub_"+filename.slice(0, -5)).remove();
                 
@@ -338,6 +355,7 @@
                     .style("left", (d3.event.x+4)+"px")
                     .style("top", (d3.event.y+4)+"px")
                     .style("display", "block")
+                    .style("z-index", 5)
                     .html(str);
                 
             }
@@ -377,10 +395,10 @@
                     updated.exit()
                         .remove()
                     
-                    updated.enter()
+                    var entered = updated.enter()
                         .append('circle')
                         .classed('sub_'+filename, true)
-                        .attr('r', 1)
+                        .attr('r', 3.3)
                         .on("click", function(post){
                             window.open("https://www.reddit.com/"+post.url, '_blank');
                             d3.event.stopPropagation();
@@ -392,7 +410,7 @@
                             handleMouseout(post, i);
                         })
                         .transition()
-                            .delay(350)
+                            .duration(300)
                             .attr("r", 2);
                     
                     updated
@@ -402,8 +420,6 @@
                         .attr('cy', function(post){
                             return post.reduced_data[timestep][1]*scale+height/2+yoffset;
                         });
-                    
-                    
                 }
                 
                 updateColors();
@@ -427,7 +443,55 @@
                             return col[0];
                         });
                 }
+            }
+            
+            function addConnectedScatter(metric){
+                var minVal = 1000000;
+                var maxVal = -1000000;
                 
+                step = 20;
+                arr = Object.values(selectedSubreddits)[0].posts;
+                
+                var movingAvg = [];
+                for (idx in arr){;
+                    var wnd = arr.slice(idx - step, parseInt(idx) + step + 1); 
+                    var result = d3.sum(wnd, function(p){return p.analyzed_data[metric]}) / wnd.length;
+                    result = (result == result) ? result : 0;
+                    
+                    var c = [(arr[idx].time-startTime)/(endTime-startTime), result]
+                    movingAvg.push(c);
+                    minVal = Math.min(minVal, c[1]);
+                    maxVal = Math.max(maxVal, c[1]);
+                }
+                
+                maxVal = (maxVal - minVal != 0) ? maxVal : 1;
+            
+                connectedScatter
+                    .append("path")
+                    .attr("class", "met_"+metric.replace(/\s/g, ''))
+                    .datum(movingAvg)
+                    .attr("fill", "none")
+                    .attr("stroke", selectedMetrics[metric])
+                    .attr("stroke-width", 1.5)
+                    .attr("vector-effect", "non-scaling-stroke")
+                    .attr("d", d3.line()
+                            .x(function(p) { return 0.01+0.98*p[0]; })
+                            .y(function(p) { return 0.6-0.4*(p[1]-minVal)/(maxVal-minVal); }))
+                    .on("mouseover", function(a){
+                        console.log();
+                        d3.selectAll(".tooltip")
+                            .style("left", (d3.event.x+4)+"px")
+                            .style("top", (d3.event.y+4)+"px")
+                            .style("display", "block")
+                            .style("z-index", 5)
+                            .html(a[Math.floor(a.length*d3.event.offsetX/d3.event.fromElement.clientWidth)][1]);
+                            // ^ FIXME: Uncaught TypeError: Cannot read property '1' of undefined 
+                    })
+                    .on("mouseout", handleMouseout);
+            }
+            
+            function deleteConnectedScatter(metric){
+                d3.selectAll(".met_"+metric.replace(/\s/g, '')).remove();
             }
             
             function selectMetric(metric, element){
@@ -438,13 +502,17 @@
                 element.css("color", color);
                 
                 updateColors();
+                addConnectedScatter(metric);
             }
             
             function deselectMetric(metric, element){
-                element.css("font-weight", "400"); 
-                element.css("color", "");
+                if (element){
+                    element.css("font-weight", "400"); 
+                    element.css("color", "");                
+                }
                 delete selectedMetrics[metric];
                 updateColors();
+                deleteConnectedScatter(metric);
             }
             
             $(document).on("click", ".met", function(){
