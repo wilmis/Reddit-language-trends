@@ -248,7 +248,12 @@
                             return post.reduced_data[timestep][1]*scale+height/2;
                         })
                         .on("click", function(post){
-                            window.open("https://www.reddit.com/"+post.url, '_blank');
+                            if (post.url.includes("www.reddit.com")){
+                                window.open(post.url, '_blank');
+                            }
+                            else {                            
+                                window.open("https://www.reddit.com/"+post.url, '_blank');
+                            }
                             d3.event.stopPropagation();
                         })
                         .on("mouseover", function(post, i){
