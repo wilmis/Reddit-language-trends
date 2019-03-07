@@ -43,13 +43,17 @@
             stroke-width:1;
         }
         
-        #timeline > g {
+        #timeline {
             opacity: 0;
         }
 
         #timeline > g > line {
             stroke: #333;
             stroke-width:2;
+        }
+
+        #timeline > text {
+            cursor: pointer;
         }
         
         #legends {
@@ -111,6 +115,7 @@
     </svg>
     
     <svg id="timeline">
+        <text transform="translate(20, 23)" class="play-button" id="play-button" fill="#9fc9cc">Play</text>
         <line class="track" x1="10%" y1="50%" x2="90%" y2="50%"></line>
         <g class="handle" transform="translate(50, 1)">
             <rect fill="#9fc9cc" opacity="0.6" y="35%" width="50" height="25%"></rect>
@@ -147,6 +152,38 @@
             var xoffset = 0;
             var yoffset = 0;
 
+            var timer = 0;
+            
+            var play_button = d3.selectAll(".play-button")    
+                .on("click", function() {
+                    var button = d3.select(this);
+                    if (button.attr("id") == "play-button"){
+                        if (time == 1 - timespan/(endTime - startTime)){
+                            time = 0;
+                        }
+                        button
+                            .attr("id", "pause-button")
+                            .text("pause");
+                        timer = setInterval(function(){
+                            time += 1/maxTimesteps;
+                            if (1 - timespan/(endTime - startTime) < time){
+                                button
+                                .attr("id", "play-button")
+                                .text("play");
+                                clearTimeout(timer);
+                            }
+                            time = Math.min(1 - timespan/(endTime - startTime), time);
+                            updateScatter();
+                        }, 70);
+                    }
+                    else {
+                        button
+                            .attr("id", "play-button")
+                            .text("play");
+                        clearTimeout(timer);
+                    }
+                })
+
             function zoomed() {
                 xoffset = d3.event.transform.x;
                 yoffset = d3.event.transform.y;
@@ -170,7 +207,7 @@
                 startTime = subreddit.time_start;
                 endTime = subreddit.time_stop;
                 timespan = subreddit.timespan;
-                $(".handle").css("opacity","1");  
+                $("#timeline").css("opacity","1");  
                 var bbox = timeline.select(".track").node().getBBox();
                 $(".handle>rect").attr("width", bbox.width*timespan/(endTime-startTime));  
                 
@@ -286,11 +323,13 @@
                      
                     updateScatter();
                     
-                    timeline.call(d3.drag()
+                    timeline.select(".handle").call(d3.drag()
                         .on("start.interrupt", function() { timeline.interrupt(); })
                         .on("start drag", function() {
                             var bbox = timeline.select(".track").node().getBBox();
+                            console.log("startDrag", time);
                             time = Math.min(Math.max((d3.event.x - bbox.x) / bbox.width, 0), 1 - timespan/(endTime - startTime));
+                            console.log("startDrag2", time);
                             updateScatter();
                         }));
                             
@@ -300,7 +339,7 @@
             
             function deselectSubreddit(filename){
                 $(".sub_"+filename.slice(0, -5)).css("font-weight", "400"); 
-                $(".handle").css("opacity", "0"); 
+                $("#timeline").css("opacity", "0"); 
                 delete selectedSubreddits[filename];
                 
                 while (Object.keys(selectedMetrics).length != 0){
